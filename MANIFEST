@@ -1,0 +1,5 @@
+Makefile.PL
+MANIFEST
+README
+t/Music-Canon.t
+lib/Music/Canon.pm
