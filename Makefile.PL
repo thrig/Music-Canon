@@ -1,12 +1,35 @@
 use 5.010000;
+
+use strict;
+use warnings;
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
-WriteMakefile(
-    NAME              => 'Music::Canon',
-    VERSION_FROM      => 'lib/Music/Canon.pm', # finds $VERSION
-    PREREQ_PM         => {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'lib/Music/Canon.pm', # retrieve abstract from module
-       AUTHOR         => 'Jeremy Mates <jmates@macosforge.org>') : ()),
+
+my %params = (
+  NAME         => 'Music::Canon',
+  ABSTRACT     => 'utility routines for musical canon construction',
+  VERSION_FROM => 'lib/Music/Canon.pm',
+  PREREQ_PM    => {
+    Carp         => 0,
+    'Test::More' => 0,
+  },
+  ( $] >= 5.005
+    ? ( AUTHOR => 'Jeremy Mates <jmates@cpan.org>' )
+    : ()
+  ),
 );
+
+if ( $ExtUtils::MakeMaker::VERSION =~ /^\d\.\d\d$/ and $ExtUtils::MakeMaker::VERSION > 6.30 ) {
+  $params{LICENSE} = 'perl';
+}
+
+if ( $ExtUtils::MakeMaker::VERSION ge '6.46' ) {
+  $params{META_MERGE} = {
+    resources => {
+      homepage   => 'http://github.com/thrig/Music-Canon',
+      license    => 'http://dev.perl.org/licenses/',
+      repository => 'http://github.com/thrig/Music-Canon',
+    }
+  };
+}
+
+WriteMakefile(%params);
