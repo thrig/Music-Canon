@@ -10,6 +10,7 @@ my %params = (
   VERSION_FROM => 'lib/Music/Canon.pm',
   PREREQ_PM    => {
     Carp            => 0,
+    'List::Util'    => 0,
     'Music::Scales' => 0.07,
     'Test::More'    => 0,
   },
