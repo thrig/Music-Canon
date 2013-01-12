@@ -9,10 +9,11 @@ my %params = (
   ABSTRACT     => 'utility routines for musical canon construction',
   VERSION_FROM => 'lib/Music/Canon.pm',
   PREREQ_PM    => {
-    Carp            => 0,
-    'List::Util'    => 0,
-    'Music::Scales' => 0.07,
-    'Test::More'    => 0,
+    Carp                  => 0,
+    'List::Util'          => 0,
+    'Music::LilyPondUtil' => 0.43,
+    'Music::Scales'       => 0.07,
+    'Test::More'          => 0,
   },
   ( $] >= 5.005
     ? ( AUTHOR => 'Jeremy Mates <jmates@cpan.org>' )
