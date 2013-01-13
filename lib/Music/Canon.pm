@@ -1,4 +1,6 @@
 # -*- Perl -*-
+#
+# utility routines for musical canon construction
 
 package Music::Canon;
 
@@ -29,60 +31,55 @@ sub contrary {
   return $self;
 }
 
-{
-  my ( $prev_input, $prev_output );
+# 1:1 interval mapping, though with the contrary, retrograde, and
+#   transpose parameters as possible influences on the results.
+sub exact_map {
+  my $self = shift;
 
-  sub exact_map {
-    my ( $self, $phrase ) = @_;
-    $phrase = [ @_[ 1 .. $#_ ] ] if ref $phrase ne 'ARRAY';
-
-    my @new_phrase;
-    for my $e (@$phrase) {
-      my $pitch;
-      if ( !defined $e ) {
-        # presumably rests/silent bits
-        push @new_phrase, undef;
-        next;
-      } elsif ( blessed $e and $e->can('pitch') ) {
-        # XXX would be nice to be able to preserve the object if can set
-        # the new pitch, though that might need ->clone on whatever...
-        $pitch = $e->pitch;
-      } elsif ( looks_like_number $e) {
-        $pitch = $e;
-      } else {
-        # pass through unknowns
-        push @new_phrase, $e;
-        next;
-      }
-
-      my $new_pitch;
-      if ( !defined $prev_output ) {
-        $new_pitch = $pitch + $self->{_transpose};
-      } else {
-        my $delta = $pitch - $prev_input;
-        $delta *= -1 if $self->{_contrary};
-        $new_pitch = $prev_output + $delta;
-      }
-      push @new_phrase, $new_pitch;
-      $prev_input  = $pitch;
-      $prev_output = $new_pitch;
+  my @new_phrase;
+  for my $e (ref $_[0] eq 'ARRAY' ? @{ $_[0] } : @_ ) {
+    my $pitch;
+    if ( !defined $e ) {
+      # presumably rests/silent bits
+      push @new_phrase, undef;
+      next;
+    } elsif ( blessed $e and $e->can('pitch') ) {
+      $pitch = $e->pitch;
+    } elsif ( looks_like_number $e) {
+      $pitch = $e;
+    } else {
+      # pass through unknowns
+      push @new_phrase, $e;
+      next;
     }
 
-    @new_phrase = reverse @new_phrase if $self->{_retrograde};
-
-    unless ( $self->{_keep_state} ) {
-      undef $prev_input;
-      undef $prev_output;
+    my $new_pitch;
+    if ( !defined $self->{_exact}->{prev_output} ) {
+      $new_pitch = $pitch + $self->{_transpose};
+    } else {
+      my $delta = $pitch - $self->{_exact}->{prev_input};
+      $delta *= -1 if $self->{_contrary};
+      $new_pitch = $self->{_exact}->{prev_output} + $delta;
     }
-
-    return @new_phrase;
+    push @new_phrase, $new_pitch;
+    $self->{_exact}->{prev_input}  = $pitch;
+    $self->{_exact}->{prev_output} = $new_pitch;
   }
 
-  sub exact_map_reset {
-    my ($self) = @_;
-    undef $prev_input;
-    undef $prev_output;
+  @new_phrase = reverse @new_phrase if $self->{_retrograde};
+
+  if ( !$self->{_keep_state} ) {
+    undef $self->{_exact}->{prev_input};
+    undef $self->{_exact}->{prev_output};
   }
+
+  return @new_phrase;
+}
+
+sub exact_map_reset {
+  my ($self) = @_;
+  undef $self->{_exact}->{prev_input};
+  undef $self->{_exact}->{prev_output};
 }
 
 sub get_contrary   { $_[0]->{_contrary} }
@@ -90,7 +87,7 @@ sub get_retrograde { $_[0]->{_retrograde} }
 
 sub get_scale_intervals {
   my ( $self, $layer ) = @_;
-  unless ( defined $layer and ( $layer eq 'input' or $layer eq 'output' ) ) {
+  if ( !defined $layer or ( $layer ne 'input' and $layer ne 'output' ) ) {
     croak "unsupported layer (must be 'input' or 'output')\n";
   }
   if ( !exists $self->{$layer}->{_asc_ints}
@@ -109,84 +106,80 @@ sub get_transpose {
   return $self->{_transpose};
 }
 
-{
-  my $prev_pitch;
+# Modal interval mapping, where steps taken will vary depending on the
+# input and output modes (lists of intervals), where in those modes the
+# notes lie, the starting notes, and also the various contrary,
+# retrograde, and transpose parameters.
+sub modal_map {
+  my $self = shift;
 
-  sub modal_map {
-    my ( $self, $phrase ) = @_;
-    $phrase = [ @_[ 1 .. $#_ ] ] if ref $phrase ne 'ARRAY';
-
-    # default to major/major conversion
-    unless ( exists $self->{input} ) {
-      $self->scale_intervals( 'input', 'major' );
-    }
-    unless ( exists $self->{output} ) {
-      $self->scale_intervals( 'output', 'major' );
-    }
-
-    my @new_phrase;
-    for my $e (@$phrase) {
-      my $pitch;
-      if ( !defined $e ) {
-        # presumably rests/silent bits
-        push @new_phrase, undef;
-        next;
-      } elsif ( blessed $e and $e->can('pitch') ) {
-        # XXX would be nice to be able to preserve the object if can set
-        # the new pitch, though that might need ->clone on whatever...
-        $pitch = $e->pitch;
-      } elsif ( looks_like_number $e) {
-        $pitch = $e;
-      } else {
-        # pass through unknowns
-        push @new_phrase, $e;
-        next;
-      }
-
-      $self->{input}->{start_pitch} = $pitch
-        unless defined $self->{input}->{start_pitch};
-
-      my $new_pitch;
-      if ( !defined $prev_pitch ) {
-        # copy at transpose offset if nothing prior, set things up for
-        # subsequent modal foo
-        $new_pitch = $pitch + $self->{_transpose};
-        $self->{output}->{start_pitch} = $pitch
-          unless defined $self->{output}->{start_pitch};
-      } else {
-        # TODO
-      }
-
-      push @new_phrase, $new_pitch;
-      $prev_pitch = $pitch;
-    }
-
-    @new_phrase = reverse @new_phrase if $self->{_retrograde};
-
-    # XXX fiddle with state vars as necessary
-
-    return @new_phrase;
+  # default to major/major conversion
+  if ( !exists $self->{input} ) {
+    $self->scale_intervals( 'input', 'major' );
+  }
+  if ( !exists $self->{output} ) {
+    $self->scale_intervals( 'output', 'major' );
   }
 
-  # XXX routines to get/set prev_pitch
+  my @new_phrase;
+  for my $e (ref $_[0] eq 'ARRAY' ? @{ $_[0] } : @_ ) {
+    my $pitch;
+    if ( !defined $e ) {
+      # presumably rests/silent bits
+      push @new_phrase, undef;
+      next;
+    } elsif ( blessed $e and $e->can('pitch') ) {
+      $pitch = $e->pitch;
+    } elsif ( looks_like_number $e) {
+      $pitch = $e;
+    } else {
+      # pass through unknowns
+      push @new_phrase, $e;
+      next;
+    }
+
+    $self->{_modal}->{input_start_pitch} = $pitch
+      unless defined $self->{_modal}->{input_start_pitch};
+
+    my $new_pitch;
+    if ( !defined $self->{_modal}->{output_start_pitch} ) {
+      # copy at transpose offset if nothing prior, set things up for
+      # subsequent modal foo
+      $new_pitch = $pitch + $self->{_transpose};
+      $self->{_modal}->{output_start_pitch} = $new_pitch;
+    } else {
+      # TODO
+    }
+
+    push @new_phrase, $new_pitch;
+  }
+
+  @new_phrase = reverse @new_phrase if $self->{_retrograde};
+
+  if ( !$self->{_keep_state} ) {
+    undef $self->{_modal}->{input_start_pitch};
+    undef $self->{_modal}->{output_start_pitch};
+  }
+
+  return @new_phrase;
 }
 
 # another way to influence modal_map (will be set automatically from the
 # phrase and transpose if unset, XXX need to think about persisting them
 # across calls, e.g. via sticky_state)
-sub modal_pitch {
-  my ( $self, $layer, $pitch ) = @_;
-
-  unless ( defined $layer and ( $layer eq 'input' or $layer eq 'output' ) ) {
-    croak "unsupported layer (must be 'input' or 'output')\n";
-  }
-  eval {
-    $self->{$layer}->{start_pitch} = $self->{_lyu}->notes2pitches($pitch);
-  };
-  croak $@ if $@;
-
-  return $self;
-}
+#sub modal_pitch {
+#  my ( $self, $layer, $pitch ) = @_;
+#
+#  if ( !defined $layer or ( $layer ne 'input' and $layer ne 'output' ) ) {
+#    croak "unsupported layer (must be 'input' or 'output')\n";
+#  }
+#  eval {
+#    $self->{$layer}->{start_pitch} = $self->{_lyu}->notes2pitches($pitch);
+#  };
+#  croak $@ if $@;
+#
+#  return $self;
+#}
 
 sub new {
   my ( $class, %param ) = @_;
@@ -252,7 +245,7 @@ sub retrograde {
 sub scale_intervals {
   my ( $self, $layer, $scale ) = @_;
 
-  unless ( defined $layer and ( $layer eq 'input' or $layer eq 'output' ) ) {
+  if ( !defined $layer or ( $layer ne 'input' and $layer ne 'output' ) ) {
     croak "unsupported layer (must be 'input' or 'output')\n";
   }
 
@@ -305,7 +298,7 @@ sub scale_intervals {
     }
   }
 
-  unless ( $self->{non_octave_scales} ) {
+  if ( !$self->{non_octave_scales} ) {
     for
       my $ref ( $self->{$layer}->{_asc_ints}, $self->{$layer}->{_dsc_ints} ) {
       my $interval_sum = sum @$ref;

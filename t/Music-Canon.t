@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 14;
+use Test::More tests => 17;
 BEGIN { use_ok('Music::Canon') }
 
 eval 'use Test::Differences';    # display convenience
@@ -17,9 +17,9 @@ my $mc = Music::Canon->new;
 isa_ok( $mc, 'Music::Canon' );
 
 # defaults
-is( $mc->get_transpose, 0, 'default transpose' );
-is( $mc->get_contrary,  1, 'default contrary' );
-is( $mc->get_retrograde,  1, 'default retrograde' );
+is( $mc->get_transpose,  0, 'default transpose' );
+is( $mc->get_contrary,   1, 'default contrary' );
+is( $mc->get_retrograde, 1, 'default retrograde' );
 
 # set intervals by scale name (via Music::Scales)
 my $resp = $mc->scale_intervals( 'input', 'major' );
@@ -51,6 +51,13 @@ $deeply->(
 
 $deeply->( [ $mc->exact_map(qw/0 1 2/) ], [qw/-2 -1 0/], 'exact map' );
 
+$mc->exact_map_reset;
+$mc->transpose(60);
+$deeply->(
+  [ $mc->exact_map(qw/2 9 5 2 1 2 4 5/) ],
+  [qw/59 60 62 63 62 59 55 62/]
+);
+
 ########################################################################
 #
 # getters/setters
@@ -61,6 +68,11 @@ $mc->contrary(0);
 is( $mc->get_contrary, 0, 'set contrary false' );
 $mc->contrary(1);
 is( $mc->get_contrary, 1, 'set contrary true' );
+
+$mc->retrograde(0);
+is( $mc->get_retrograde, 0, 'set retrograde false' );
+$mc->retrograde(1);
+is( $mc->get_retrograde, 1, 'set retrograde true' );
 
 $mc->transpose(q{c'});
 is( $mc->get_transpose, 60, 'transpose to lilypond note' );
