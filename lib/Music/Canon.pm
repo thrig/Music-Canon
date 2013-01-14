@@ -193,18 +193,28 @@ sub modal_map {
       # dbg steps look find in output...
       #use Data::Dumper; warn Dumper \%output, $dir;
 
-      my @slice = 0 .. $output{remainder} - 1;
+      my ( @slice, $step_index );
       if ( $dir < 0 ) {
-        @slice =
-          $#{ $self->{output}->{$dir}->{intervals} } -
-          $output{remainder} +
-          1 .. $#{ $self->{output}->{$dir}->{intervals} };
+        $step_index =
+          $#{ $self->{output}->{$dir}->{intervals} } - $output{remainder} + 1;
+        @slice = $step_index .. $#{ $self->{output}->{$dir}->{intervals} };
+      } else {
+        $step_index = $output{remainder} - 1;
+        @slice      = 0 .. $step_index;
       }
+
       my $interval = $self->{output}->{$dir}->{sum} * $output{cycles} +
         sum @{ $self->{output}->{$dir}->{intervals} }[@slice];
 
       if ($chromatic_offset) {
-        warn "\nTODO $chromatic_offset\n";
+        my $step_interval =
+          $self->{output}->{$dir}->{intervals}->[$step_index];
+        if ( $chromatic_offset >= $step_interval ) {
+          # XXX or call hook function
+          croak "undefined chromatic conversion\n";
+        } else {
+          $interval -= $chromatic_offset;
+        }
       }
 
       $interval *= $dir;
