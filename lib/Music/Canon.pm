@@ -25,19 +25,13 @@ my $DEG_IN_SCALE = 12;
 #
 # SUBROUTINES
 
-sub contrary {
-  my ( $self, $contrary ) = @_;
-  $self->{_contrary} = $contrary ? 1 : 0;
-  return $self;
-}
-
 # 1:1 interval mapping, though with the contrary, retrograde, and
 #   transpose parameters as possible influences on the results.
 sub exact_map {
   my $self = shift;
 
   my @new_phrase;
-  for my $e (ref $_[0] eq 'ARRAY' ? @{ $_[0] } : @_ ) {
+  for my $e ( ref $_[0] eq 'ARRAY' ? @{ $_[0] } : @_ ) {
     my $pitch;
     if ( !defined $e ) {
       # presumably rests/silent bits
@@ -90,11 +84,12 @@ sub get_scale_intervals {
   if ( !defined $layer or ( $layer ne 'input' and $layer ne 'output' ) ) {
     croak "unsupported layer (must be 'input' or 'output')\n";
   }
-  if ( !exists $self->{$layer}->{_asc_ints}
-    or !exists $self->{$layer}->{_dsc_ints} ) {
+  if ( !exists $self->{$layer}->{1}->{intervals}
+    or !exists $self->{$layer}->{-1}->{intervals} ) {
     croak "scale intervals for $layer not previously set\n";
   }
-  return $self->{$layer}->{_asc_ints}, $self->{$layer}->{_dsc_ints};
+  return $self->{$layer}->{1}->{intervals},
+    $self->{$layer}->{-1}->{intervals};
 }
 
 sub get_transpose {
@@ -107,9 +102,9 @@ sub get_transpose {
 }
 
 # Modal interval mapping, where steps taken will vary depending on the
-# input and output modes (lists of intervals), where in those modes the
-# notes lie, the starting notes, and also the various contrary,
-# retrograde, and transpose parameters.
+# input and output modes (a.k.a scales or really just arbitrary lists of
+# intervals), where in those modes the notes lie, the starting notes,
+# and also the various contrary, retrograde, and transpose parameters.
 sub modal_map {
   my $self = shift;
 
@@ -122,7 +117,7 @@ sub modal_map {
   }
 
   my @new_phrase;
-  for my $e (ref $_[0] eq 'ARRAY' ? @{ $_[0] } : @_ ) {
+  for my $e ( ref $_[0] eq 'ARRAY' ? @{ $_[0] } : @_ ) {
     my $pitch;
     if ( !defined $e ) {
       # presumably rests/silent bits
@@ -143,17 +138,82 @@ sub modal_map {
 
     my $new_pitch;
     if ( !defined $self->{_modal}->{output_start_pitch} ) {
-      # copy at transpose offset if nothing prior, set things up for
-      # subsequent modal foo
+      # copy at transpose offset if nothing prior, set things up for the
+      # subsequent calculations, which are all done relative to this
+      # known linking point between the two different modes.
       $new_pitch = $pitch + $self->{_transpose};
       $self->{_modal}->{output_start_pitch} = $new_pitch;
+
     } else {
-      # TODO
+      # modal mapping - diatonic where possible, chromatic or undefined
+      # otherwise. Gist of the logic is to figure out how many diatonic
+      # steps (or substeps for chromaics) there are via the input mode,
+      # then replay that may number of steps (or substeps for
+      # chromatics, if possible) in the appropriate output mode, as
+      # modified by the contrary and transpose parameters.
+
+      my %input;
+      $input{delta} = $pitch - $self->{_modal}->{input_start_pitch};
+      my $dir = $input{delta} < 0 ? -1 : 1;
+
+      $input{cycles} =
+        int abs( $input{delta} ) / $self->{input}->{$dir}->{sum};
+      $input{remainder} =
+        abs( $input{delta} ) % $self->{input}->{$dir}->{sum};
+
+      my $steps            = $input{cycles} * $self->{input}->{$dir}->{sum};
+      my $running_total    = 0;
+      my $chromatic_offset = 0;
+      for my $step ( @{ $self->{input}->{$dir}->{intervals} } ) {
+        $running_total += $step;
+        $steps++;
+        if ( $running_total >= $input{remainder} ) {
+          $chromatic_offset = $running_total - $input{remainder};
+          last;
+        }
+      }
+
+      # dbg input audit
+      #use Data::Dumper; warn Dumper \%input, $steps;
+
+      my %output;
+      $dir *= -1 if $self->{_contrary};
+
+      # dbg direction seemed fine
+
+      # so now from steps back to an interval and direction, and from those a
+      # new pitch for the new phrase. Will be N many steps, and if not
+      # chromatic, we're done, as diatonic will always map to something.
+      $output{cycles} =
+        int $steps / @{ $self->{output}->{$dir}->{intervals} };
+      $output{remainder} =
+        $steps % @{ $self->{output}->{$dir}->{intervals} };
+
+      # dbg steps look find in output...
+      #use Data::Dumper; warn Dumper \%output, $dir;
+
+      my @slice = 0 .. $output{remainder} - 1;
+      if ( $dir < 0 ) {
+        @slice =
+          $#{ $self->{output}->{$dir}->{intervals} } -
+          $output{remainder} +
+          1 .. $#{ $self->{output}->{$dir}->{intervals} };
+      }
+      my $interval = $self->{output}->{$dir}->{sum} * $output{cycles} +
+        sum @{ $self->{output}->{$dir}->{intervals} }[@slice];
+
+      if ($chromatic_offset) {
+        die "TODO $chromatic_offset";
+      }
+
+      $interval *= $dir;
+      $new_pitch = $self->{_modal}->{output_start_pitch} + $interval;
     }
 
     push @new_phrase, $new_pitch;
   }
 
+  # flip phrase and tidy up state if required
   @new_phrase = reverse @new_phrase if $self->{_retrograde};
 
   if ( !$self->{_keep_state} ) {
@@ -163,23 +223,6 @@ sub modal_map {
 
   return @new_phrase;
 }
-
-# another way to influence modal_map (will be set automatically from the
-# phrase and transpose if unset, XXX need to think about persisting them
-# across calls, e.g. via sticky_state)
-#sub modal_pitch {
-#  my ( $self, $layer, $pitch ) = @_;
-#
-#  if ( !defined $layer or ( $layer ne 'input' and $layer ne 'output' ) ) {
-#    croak "unsupported layer (must be 'input' or 'output')\n";
-#  }
-#  eval {
-#    $self->{$layer}->{start_pitch} = $self->{_lyu}->notes2pitches($pitch);
-#  };
-#  croak $@ if $@;
-#
-#  return $self;
-#}
 
 sub new {
   my ( $class, %param ) = @_;
@@ -236,12 +279,6 @@ sub new {
   return $self;
 }
 
-sub retrograde {
-  my ( $self, $retrograde ) = @_;
-  $self->{_retrograde} = $retrograde ? 1 : 0;
-  return $self;
-}
-
 sub scale_intervals {
   my ( $self, $layer, $scale ) = @_;
 
@@ -258,7 +295,7 @@ sub scale_intervals {
       croak "asc intervals must be integers\n"
         unless looks_like_number $n and $n =~ m/^[+-]?\d+$/;
     }
-    $self->{$layer}->{_asc_ints} = $scale->[0];
+    $self->{$layer}->{1}->{intervals} = $scale->[0];
 
     if ( @$scale > 1 ) {
       croak "descending intervals must be array reference\n"
@@ -269,11 +306,12 @@ sub scale_intervals {
           unless looks_like_number $n and $n =~ m/^[+-]?\d+$/;
       }
 
-      $self->{$layer}->{_dsc_ints} = $scale->[1];
+      $self->{$layer}->{-1}->{intervals} = $scale->[1];
 
     } else {
       # assume dsc is asc (true, excepting melodic minor and whatnot)
-      $self->{$layer}->{_dsc_ints} = $self->{$layer}->{_asc_ints};
+      $self->{$layer}->{-1}->{intervals} =
+        $self->{$layer}->{1}->{intervals};
     }
 
   } else {
@@ -289,18 +327,18 @@ sub scale_intervals {
     }
 
     for my $i ( 1 .. $#asc_nums ) {
-      push @{ $self->{$layer}->{_asc_ints} },
+      push @{ $self->{$layer}->{1}->{intervals} },
         $asc_nums[$i] - $asc_nums[ $i - 1 ];
     }
     for my $i ( reverse 1 .. $#dsc_nums ) {
-      push @{ $self->{$layer}->{_dsc_ints} },
+      push @{ $self->{$layer}->{-1}->{intervals} },
         $dsc_nums[ $i - 1 ] - $dsc_nums[$i];
     }
   }
 
   if ( !$self->{non_octave_scales} ) {
-    for
-      my $ref ( $self->{$layer}->{_asc_ints}, $self->{$layer}->{_dsc_ints} ) {
+    for my $ref ( $self->{$layer}->{1}->{intervals},
+      $self->{$layer}->{-1}->{intervals} ) {
       my $interval_sum = sum @$ref;
       if ( $interval_sum < $self->{_DEG_IN_SCALE} ) {
         push @$ref, $self->{_DEG_IN_SCALE} - $interval_sum;
@@ -309,13 +347,27 @@ sub scale_intervals {
       }
     }
   }
-  $self->{$layer}->{_asc_sum} = sum @{ $self->{$layer}->{_asc_ints} };
-  $self->{$layer}->{_dsc_sum} = sum @{ $self->{$layer}->{_dsc_ints} };
+  $self->{$layer}->{1}->{sum} =
+    sum @{ $self->{$layer}->{1}->{intervals} };
+  $self->{$layer}->{-1}->{sum} =
+    sum @{ $self->{$layer}->{-1}->{intervals} };
 
   return $self;
 }
 
-sub transpose {
+sub set_contrary {
+  my ( $self, $contrary ) = @_;
+  $self->{_contrary} = $contrary ? 1 : 0;
+  return $self;
+}
+
+sub set_retrograde {
+  my ( $self, $retrograde ) = @_;
+  $self->{_retrograde} = $retrograde ? 1 : 0;
+  return $self;
+}
+
+sub set_transpose {
   my ( $self, $transpose ) = @_;
   $transpose //= 0;
   eval { $self->{_transpose} = $self->{_lyu}->notes2pitches($transpose); };

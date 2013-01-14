@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 BEGIN { use_ok('Music::Canon') }
 
 eval 'use Test::Differences';    # display convenience
@@ -52,11 +52,14 @@ $deeply->(
 $deeply->( [ $mc->exact_map(qw/0 1 2/) ], [qw/-2 -1 0/], 'exact map' );
 
 $mc->exact_map_reset;
-$mc->transpose(60);
+$mc->set_transpose(60);
 $deeply->(
   [ $mc->exact_map(qw/2 9 5 2 1 2 4 5/) ],
   [qw/59 60 62 63 62 59 55 62/]
 );
+
+$mc->set_transpose(0);
+$deeply->( [ $mc->modal_map(qw/0 2 4 5/) ], [qw/-5 -3 -1 0/], 'modal map' );
 
 ########################################################################
 #
@@ -64,23 +67,23 @@ $deeply->(
 
 $mc = Music::Canon->new;
 
-$mc->contrary(0);
+$mc->set_contrary(0);
 is( $mc->get_contrary, 0, 'set contrary false' );
-$mc->contrary(1);
+$mc->set_contrary(1);
 is( $mc->get_contrary, 1, 'set contrary true' );
 
-$mc->retrograde(0);
+$mc->set_retrograde(0);
 is( $mc->get_retrograde, 0, 'set retrograde false' );
-$mc->retrograde(1);
+$mc->set_retrograde(1);
 is( $mc->get_retrograde, 1, 'set retrograde true' );
 
-$mc->transpose(q{c'});
+$mc->set_transpose(q{c'});
 is( $mc->get_transpose, 60, 'transpose to lilypond note' );
 
 # some value that should not be set by default
 my $rand_transpose = 200 + int rand 100;
-$mc->transpose($rand_transpose);
+$mc->set_transpose($rand_transpose);
 is( $mc->get_transpose, $rand_transpose, 'get rand transpose' );
 
-$mc->transpose;
+$mc->set_transpose;
 is( $mc->get_transpose, 0, 'reset transpose' );
