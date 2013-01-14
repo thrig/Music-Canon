@@ -13,6 +13,7 @@ my %params = (
     'List::Util'          => 0,
     'Music::LilyPondUtil' => 0.43,
     'Music::Scales'       => 0.07,
+    'Test::Exception'     => 0,
     'Test::More'          => 0,
   },
   ( $] >= 5.005

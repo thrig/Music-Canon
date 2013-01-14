@@ -74,6 +74,7 @@ sub exact_map_reset {
   my ($self) = @_;
   undef $self->{_exact}->{prev_input};
   undef $self->{_exact}->{prev_output};
+  return $self;
 }
 
 sub get_contrary   { $_[0]->{_contrary} }
@@ -203,7 +204,7 @@ sub modal_map {
         sum @{ $self->{output}->{$dir}->{intervals} }[@slice];
 
       if ($chromatic_offset) {
-        die "TODO $chromatic_offset";
+        warn "\nTODO $chromatic_offset\n";
       }
 
       $interval *= $dir;
@@ -222,6 +223,13 @@ sub modal_map {
   }
 
   return @new_phrase;
+}
+
+sub modal_map_reset {
+  my ($self) = @_;
+  undef $self->{_modal}->{input_start_pitch};
+  undef $self->{_modal}->{output_start_pitch};
+  return $self;
 }
 
 sub new {
