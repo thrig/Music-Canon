@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 29;
+use Test::More tests => 30;
 use Test::Exception;
 
 eval 'use Test::Differences';    # display convenience
@@ -76,8 +76,6 @@ dies_ok( sub { $mc->modal_map(qw/0 1/) }, 'undefined chromatic' );
 # TODO test phrases that go down vs. up, test phrases against melodic
 # minor or other scales that differ in asc vs. dsc.
 
-# TODO test set_scale_intervals with Forte Numbers as input
-
 ########################################################################
 #
 # getters/setters
@@ -115,6 +113,7 @@ $deeply->( [ $mc->get_modal_pitches ], [ 99, 100 ], 'lookup modal pitches' );
 #
 # some more set_scale_intervals tests - plenty to go wrong
 
+# melodic minor from Music::Scales and then manually
 $mc->set_scale_intervals( 'output', 'mm' );
 my @mm_via_scales = $mc->get_scale_intervals('output');
 
@@ -124,7 +123,14 @@ $mc->set_scale_intervals(
   [ 2, 1, 2, 2, 1, 2 ]
 );
 my @mm_via_intervals = $mc->get_scale_intervals('output');
-
 $deeply->(
   \@mm_via_intervals, \@mm_via_scales, 'Music::Scales vs. raw intervals'
+);
+
+# Forte Numbers!
+$mc->set_scale_intervals( 'input', '5-35', '5-25' );
+$deeply->(
+  [ $mc->get_scale_intervals('input') ],
+  [ [qw/2 2 3 2 3/], [qw/2 1 2 3 4/] ],
+  'scale intervals by Forte'
 );
