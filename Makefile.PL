@@ -6,11 +6,12 @@ use ExtUtils::MakeMaker;
 
 my %params = (
   NAME         => 'Music::Canon',
-  ABSTRACT     => 'utility routines for musical canon construction',
+  ABSTRACT     => 'routines for musical canon construction',
   VERSION_FROM => 'lib/Music/Canon.pm',
   PREREQ_PM    => {
     Carp                  => 0,
     'List::Util'          => 0,
+    'Music::AtonalUtil'   => 0.70,
     'Music::LilyPondUtil' => 0.43,
     'Music::Scales'       => 0.07,
     'Test::Exception'     => 0,

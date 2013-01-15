@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 26;
+use Test::More tests => 29;
 use Test::Exception;
 
 eval 'use Test::Differences';    # display convenience
@@ -24,13 +24,12 @@ is( $mc->get_contrary,   1, 'default contrary' );
 is( $mc->get_retrograde, 1, 'default retrograde' );
 
 # set intervals by scale name (via Music::Scales)
-my $resp = $mc->scale_intervals( 'input', 'major' );
+my $resp = $mc->set_scale_intervals( 'input', 'major' );
 isa_ok( $resp, 'Music::Canon' );
 
 # set intervals manually (also major) - XXX think about whether reverse
 # should be top down, as descending is how musician would think about it
-$resp = $mc->scale_intervals( 'output',
-  [ [qw/2 2 1 2 2 2 1/], [qw/2 2 1 2 2 2 1/] ] );
+$resp = $mc->set_scale_intervals( 'output', [qw/2 2 1 2 2 2 1/] );
 isa_ok( $resp, 'Music::Canon' );
 
 # XXX not sure about order of things, how reverse is layed out, must
@@ -69,6 +68,16 @@ isa_ok( $mc->modal_map_reset, 'Music::Canon' );
 $deeply->( [ $mc->modal_map(qw/0 3/) ], [qw/-2 0/], 'modal chromatic' );
 dies_ok( sub { $mc->modal_map(qw/0 1/) }, 'undefined chromatic' );
 
+# TODO longer phrase test with chromatics, leaps
+
+# TODO test other modal maps, like pentatonic to other things, or pitch
+# sets (Forte Number support?)
+
+# TODO test phrases that go down vs. up, test phrases against melodic
+# minor or other scales that differ in asc vs. dsc.
+
+# TODO test set_scale_intervals with Forte Numbers as input
+
 ########################################################################
 #
 # getters/setters
@@ -85,8 +94,11 @@ is( $mc->get_retrograde, 0, 'set retrograde false' );
 $mc->set_retrograde(1);
 is( $mc->get_retrograde, 1, 'set retrograde true' );
 
+# transpose to a note defers the conversion to a pitch until have the
+# starting pitch of the input phrase so can convert from that pitch to
+# the desired lilypond note
 $mc->set_transpose(q{c'});
-is( $mc->get_transpose, 60, 'transpose to lilypond note' );
+is( $mc->get_transpose, q{c'}, 'transpose to lilypond note' );
 
 # some value that should not be set by default
 my $rand_transpose = 200 + int rand 100;
@@ -95,3 +107,24 @@ is( $mc->get_transpose, $rand_transpose, 'get rand transpose' );
 
 $mc->set_transpose;
 is( $mc->get_transpose, 0, 'reset transpose' );
+
+isa_ok( $mc->set_modal_pitches( 99, 100 ), 'Music::Canon' );
+$deeply->( [ $mc->get_modal_pitches ], [ 99, 100 ], 'lookup modal pitches' );
+
+########################################################################
+#
+# some more set_scale_intervals tests - plenty to go wrong
+
+$mc->set_scale_intervals( 'output', 'mm' );
+my @mm_via_scales = $mc->get_scale_intervals('output');
+
+$mc->set_scale_intervals(
+  'output',
+  [ 2, 1, 2, 2, 2, 2 ],
+  [ 2, 1, 2, 2, 1, 2 ]
+);
+my @mm_via_intervals = $mc->get_scale_intervals('output');
+
+$deeply->(
+  \@mm_via_intervals, \@mm_via_scales, 'Music::Scales vs. raw intervals'
+);
