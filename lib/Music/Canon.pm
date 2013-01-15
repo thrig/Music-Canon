@@ -492,19 +492,21 @@ And more!
 
 =head1 DESCRIPTION
 
-Musical canons involve horizontal lines of music (often called voices or
-layers in extant software) that are combined with other canons or free
-counterpoint lines to produce music. This module assists with the
-creation of new lines of music via the various C<*_map> methods, and
-supports contrary motion, retrograde, and transpositions. Whether or not
-the output is usable is left to the composer. Harmony can be created by
-careful selection of the input material and the mapping settings, or
-perhaps by adding a free counterpoint voice to support the canon voices.
-Analyzing the results with L<Music::Tension> may help search for
-suitable material.
+Musical canons involve horizontal lines of music (often called voices)
+that are combined with other canon or free counterpoint voices to
+produce harmony. This module assists with the creation of new voices.
+Whether or not the output is usable is left to the composer. Harmony can
+be created by careful selection of the input material and the mapping
+settings, or perhaps by adding a free counterpoint voice to support the
+canon voices. Analyzing the results with L<Music::Tension> may help
+search for suitable material.
 
-Knowledge of counterpoint and canon will doubtless help any user of this
-module; the L</"SEE ALSO"> section lists resources for learning these.
+The methods of this module suit crab canon, as those lines are
+relatively easy to calculate. Other forms of canon would ideally require
+a counterpoint module, which has not yet been written.
+
+Knowledge of canon will doubtless help any user of this module; the
+L</"SEE ALSO"> section lists resources for learning these.
 
 =head1 METHODS
 
@@ -730,7 +732,7 @@ different things:
 
 If the I<dsc> is undefined, the corresponding I<asc> intervals will be
 used, except for L<Music::Scales>, for which the descending intervals
-associated with that scale name will be used.
+associated with the ascending scale will be used.
 
 NOTE that the descending intervals must be ordered from the lowest pitch
 up. That is, melodic minor can be stated manually via:
