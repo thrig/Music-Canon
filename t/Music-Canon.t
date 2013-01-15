@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 30;
+use Test::More tests => 31;
 use Test::Exception;
 
 eval 'use Test::Differences';    # display convenience
@@ -52,8 +52,24 @@ $deeply->(
 # Mappings
 
 $deeply->( [ $mc->exact_map(qw/0 1 2/) ], [qw/-2 -1 0/], 'exact map' );
-
 isa_ok( $mc->exact_map_reset,   'Music::Canon' );
+
+# vs. individual calls for each note
+{
+  my @input = qw/0 1 2/;
+  my @output;
+  for my $p (@input) {
+    push @output, $mc->exact_map($p);
+  }
+
+  # Retrograde is meaningless if doing note-by-note calls, as there is
+  # never anything that can be reversed...
+  @output = reverse @output if $mc->get_retrograde;
+
+  $deeply->( \@output, [qw/-2 -1 0/], 'exact map multiple calls' );
+  $mc->exact_map_reset;
+}
+
 isa_ok( $mc->set_transpose(60), 'Music::Canon' );
 $deeply->(
   [ $mc->exact_map(qw/2 9 5 2 1 2 4 5/) ],

@@ -80,7 +80,7 @@ sub exact_map {
     undef $self->{_exact}->{prev_output};
   }
 
-  return @new_phrase;
+  return @new_phrase == 1 ? $new_phrase[0] : @new_phrase;
 }
 
 sub exact_map_reset {
@@ -262,7 +262,7 @@ sub modal_map {
     undef $self->{_modal}->{output_start_pitch};
   }
 
-  return @new_phrase;
+  return @new_phrase == 1 ? $new_phrase[0] : @new_phrase;
 }
 
 sub modal_map_reset {
@@ -638,6 +638,7 @@ calls can be made to the mapping function, which suits B<modal_map>:
     }
     push @output, $result;
   }
+  @output = reverse @output if $mc->get_retrograde;
   $mc_state->modal_map_reset;
 
 The other workflow is to disable state, and pass entire phrases for
@@ -708,7 +709,8 @@ method calls.
 =item B<set_retrograde> I<boolean>
 
 Sets the retrograde boolean (on by default). If set, phrases from the
-C<*_map> routines will be reversed.
+C<*_map> routines will be reversed. Meaningless if C<*_map> calls are
+being made note-by-note (see the I<keep_state> documentation).
 
 Returns the L<Music::Canon> object, so can be chained with other
 method calls.
