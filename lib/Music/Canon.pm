@@ -16,7 +16,7 @@ use Music::LilyPondUtil ();    # transpose convenience
 use Music::Scales qw/get_scale_nums is_scale/;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 # NOTE a new() param, below, but I have not thought about what changing
 # it would actually do. Use the $self entry in all subsequent code.
@@ -206,13 +206,8 @@ sub modal_map {
         }
       }
 
-      # dbg input audit
-      #use Data::Dumper; warn Dumper \%input, $steps;
-
       my %output;
       $dir *= -1 if $self->{_contrary};
-
-      # dbg direction seemed fine
 
       # so now from steps back to an interval and direction, and from those a
       # new pitch for the new phrase. Will be N many steps, and if not
@@ -221,9 +216,6 @@ sub modal_map {
         int $steps / @{ $self->{output}->{$dir}->{intervals} };
       $output{remainder} =
         $steps % @{ $self->{output}->{$dir}->{intervals} };
-
-      # dbg steps look find in output...
-      #use Data::Dumper; warn Dumper \%output, $dir;
 
       my ( @slice, $step_index );
       if ( $dir < 0 ) {
@@ -495,8 +487,8 @@ And more!
 Musical canons involve horizontal lines of music (often called voices)
 that are combined with other canon or free counterpoint voices to
 produce harmony. This module assists with the creation of new voices.
-Whether or not the output is usable is left to the composer. Harmony can
-be created by careful selection of the input material and the mapping
+Whether the output is usable is left to the composer. Harmony can be
+created by careful selection of the input material and the mapping
 settings, or perhaps by adding a free counterpoint voice to support the
 canon voices. Analyzing the results with L<Music::Tension> may help
 search for suitable material.
@@ -555,9 +547,9 @@ way to indicate that the output list be reversed.
 
 =item B<get_scale_intervals> I<layer>
 
-Returns the current scale intervals for the indicated I<layer> (C<input>
-or C<output>), or throws an exception if these are unset. The intervals
-are returned as a list of two array references, the first for the scale
+Returns the scale intervals for the indicated I<layer> (C<input> or
+C<output>), or throws an exception if these are unset. The intervals are
+returned as a list of two array references, the first for the scale
 ascending, the second for the scale descending.
 
 Note that descending scale intervals are noted from the lowest note up,
@@ -566,33 +558,29 @@ not highest note down.
 =item B<get_transpose>
 
 Returns the current transpose setting (integer of semitones or lilypond
-note name, depending). Lilypond note names are preserved until
-necessary, as to transpose to a lilypond note name, one must have the
-pitch being transposed from, so that the delta between those two
-pitches can be derived. Otherwise, given an integer, the transpose is
-by that amount.
+note name, depending on what was previously set).
 
 =item B<modal_map> I<phrase>
 
 Modal mapping of the pitches in I<phrase> from an arbitrary input mode
-to an arbitrary output mode, as set by B<set_scale_intervals>. Returns a
-list, or throws an exception if a pitch cannot be converted. I<phrase>
-may be a list or an array reference, and may contain raw pitch numbers,
-objects that support a B<pitch> method, or other data that will be
-passed through unchanged.
+to an arbitrary output mode, as set by B<set_scale_intervals>, or the
+Major scale by default. Returns a list, or throws an exception if a
+pitch cannot be converted. I<phrase> may be a list or an array
+reference, and may contain raw pitch numbers, objects that support a
+B<pitch> method, or other data that will be passed through unchanged.
 
 The algorithm operates by converting the intervals between the notes
-into a number of diatonic steps in the input mode (and chromatic
-adjustment, if necessary), then replaying that many steps in the output
-(and chromatic adjustment, if necessary) mode, using the starting
-pitches of the input phrase (first note) and output phrase (first note
-of input phrase as affected by the B<transpose> setting) as the linkage
-between the two modes.
+into diatonic steps via the input mode, then replicates that many steps
+in the output mode, followed by any necessary chromatic adjustments. The
+initial starting pitches (derived from the input phrase and transpose
+setting, or via pitches set via the B<set_modal_pitches> method) form
+the point of linkage between the two arbitrary scales or modes or really
+arbitrary interval sequences.
 
 An example may help illustrate this function. By default, the Major
-scale to the Major scale conversion is used, which, with other
-defaults set by this module, uses something like the following chart
-to convert notes:
+scale to the Major scale conversion is used, which, with other defaults
+set by this module (contrary motion is the default), uses something like
+the following chart to convert notes:
 
   In  | C  | c# | D | d# | E | F | f# | G | g# | A | a# | B | C' |
   Out | C' | x  | B | a# | A | G | f# | F | x  | E | d# | D | C  |
@@ -603,8 +591,9 @@ C<c#> using this mapping and transposition. Other mappings and
 transpositions will have between zero to several notes that cannot be
 converted.
 
-B<modal_map> is affected by various settings, notably B<set_contrary>,
-B<set_retrograde>, B<set_scale_intervals>, and B<set_transpose>.
+B<modal_map> is affected by various things, notably B<set_contrary>,
+B<set_modal_pitches>, B<set_retrograde>, B<set_scale_intervals>, and
+B<set_transpose>.
 
 Be sure to call B<modal_map_reset> when done converting a phrase.
 
@@ -624,7 +613,7 @@ are listed here.
 
 =item *
 
-I<contrary> - sets the B<contrary> option. On by default.
+I<contrary> - sets the B<contrary> boolean. On by default.
 
 =item *
 
@@ -634,13 +623,11 @@ B<set_scale_intervals> and B<modal_map> for details.
 
 =item *
 
-I<keep_state> - configures whether state is maintained through
-different calls to the various C<*_map> methods. On by default, which
-will require the use of the corresponding C<*_map_reset> methods when a
-phrase is complete. There are two possible workflows; with state
-enabled, multiple calls can be made to the mapping function, which suits
-B<modal_map> and the need to handle individual exceptions should a pitch
-produce an undefined conversion:
+I<keep_state> - configures whether state is maintained through different
+calls to the various C<*_map> methods. On by default, which requires the
+use of the corresponding C<*_map_reset> method when a phrase is
+complete. There are two possible workflows; with state enabled, multiple
+calls can be made to the mapping function, which suits B<modal_map>:
 
   my $mc_state = Music::Canon->new;
   for my $e (@input) {
@@ -654,8 +641,9 @@ produce an undefined conversion:
   $mc_state->modal_map_reset;
 
 The other workflow is to disable state, and pass entire phrases for
-conversion in one go. This better suits B<exact_map>, which unlike the
-modal transformation will not have pitches it cannot convert:
+conversion in one call. This better suits B<exact_map>, which unlike the
+modal transformation will not have pitches it cannot convert, and thus
+will not need to handle individual note exceptions:
 
   my $mc_no_state = Music::Canon->new(keep_state => 0);
   my @output = $mc_no_state->exact_map(\@input);
@@ -663,13 +651,19 @@ modal transformation will not have pitches it cannot convert:
 =item *
 
 I<non_octave_scales> - configures whether scales should be bounded at an
-octave (12 semitones) or not. The default is to complete interval sets
-that sum up to less than 12 to include an additional element such that
-the sum of the intervals is 12. Interval sets greater than 12 will cause
-an exception to be thrown.
+octave (12 semitones) or not. The default is to pad interval sets that
+sum up to less than 12 to include an additional element such that the
+sum of the intervals is 12. Interval sets greater than 12 will cause an
+exception to be thrown.
 
-Enable this option only if dealing with a maqam or similar scale that is
-not bounded by the Western notion of octave.
+Enable this option only if dealing with a maqam or similar scale that
+is not bounded by the Western notion of octave. For example, the whole
+tone scale:
+
+  my $mc = Music::Canon->new( non_octave_scales => 1 );
+  # or Forte Number '6-35'
+  $mc->set_scale_intervals('input',  [2,2,2,2,2] );
+  $mc->set_scale_intervals('output', [2,2,2,2,2] );
 
 =item *
 
@@ -769,9 +763,9 @@ method calls.
 
 "The Technique of Canon" by Hugo Norden
 
-"Counterpointer" by Ars Nova (training software).
+"Counterpointer" by Ars Nova (counterpoint instruction software).
 
-http://en.wikipedia.org/wiki/Forte_number
+L<http://en.wikipedia.org/wiki/Forte_number>
 
 L<Music::AtonalUtil>, L<Music::LilyPondUtil>, L<Music::Scales>,
 L<Music::Tension>
