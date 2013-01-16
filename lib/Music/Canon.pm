@@ -227,8 +227,9 @@ sub modal_map {
         @slice      = 0 .. $step_index;
       }
 
-      my $interval = $self->{output}->{$dir}->{sum} * $output{cycles} +
-        sum @{ $self->{output}->{$dir}->{intervals} }[@slice];
+      my $interval = $self->{output}->{$dir}->{sum} * $output{cycles};
+      $interval += sum @{ $self->{output}->{$dir}->{intervals} }[@slice]
+        if @slice;
 
       if ($chromatic_offset) {
         my $step_interval =
@@ -424,7 +425,7 @@ sub set_scale_intervals {
 
   # Complete scales to sum to 12 by default (Music::Scales omits the VII
   # to I interval, and who knows what a custom list would contain).
-  if ( !$self->{non_octave_scales} ) {
+  if ( !$self->{_non_octave_scales} ) {
     for my $ref ( $self->{$layer}->{1}->{intervals},
       $self->{$layer}->{-1}->{intervals} ) {
       my $interval_sum = sum @$ref;
