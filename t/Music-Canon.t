@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 31;
+use Test::More tests => 36;
 use Test::Exception;
 
 eval 'use Test::Differences';    # display convenience
@@ -23,36 +23,45 @@ is( $mc->get_transpose,  0, 'default transpose' );
 is( $mc->get_contrary,   1, 'default contrary' );
 is( $mc->get_retrograde, 1, 'default retrograde' );
 
-# set intervals by scale name (via Music::Scales)
-my $resp = $mc->set_scale_intervals( 'input', 'major' );
-isa_ok( $resp, 'Music::Canon' );
-
-# set intervals manually (also major) - XXX think about whether reverse
-# should be top down, as descending is how musician would think about it
-$resp = $mc->set_scale_intervals( 'output', [qw/2 2 1 2 2 2 1/] );
-isa_ok( $resp, 'Music::Canon' );
-
-# XXX not sure about order of things, how reverse is layed out, must
-# compare against 'major' vs. passing qw(2 2 1 2 2 2 1) vs. passing qw(2
-# 2 1 2 2 2) in vs. differing asc vs dsc intervals sets vs. what
-# whatever the modal transmogrifier sub needs to do its thing.
+# major/major the default
 $deeply->(
   [ $mc->get_scale_intervals('input') ],
-  [ [qw(2 2 1 2 2 2 1)], [qw(2 2 1 2 2 2 1)] ],
+  [ [qw(2 2 1 2 2 2 1)], [qw(1 2 2 2 1 2 2)] ],
   'major intervals check input'
 );
 $deeply->(
   [ $mc->get_scale_intervals('output') ],
-  [ [qw(2 2 1 2 2 2 1)], [qw(2 2 1 2 2 2 1)] ],
+  [ [qw(2 2 1 2 2 2 1)], [qw(1 2 2 2 1 2 2)] ],
   'major intervals check output'
+);
+
+# set intervals by scale name (via Music::Scales)
+my $resp = $mc->set_scale_intervals( 'input', 'aeolian' );
+isa_ok( $resp, 'Music::Canon' );
+
+# or by interval (aeolian again)
+$resp = $mc->set_scale_intervals( 'output', [qw/2 1 2 2 1 2 2/] );
+isa_ok( $resp, 'Music::Canon' );
+
+$deeply->(
+  [ $mc->get_scale_intervals('input') ],
+  [ [qw(2 1 2 2 1 2 2)], [qw(2 2 1 2 2 1 2)] ],
+  'minor intervals check input'
+);
+$deeply->(
+  [ $mc->get_scale_intervals('output') ],
+  [ [qw(2 1 2 2 1 2 2)], [qw(2 2 1 2 2 1 2)] ],
+  'minor intervals check output'
 );
 
 ########################################################################
 #
 # Mappings
 
+$mc = Music::Canon->new;
+
 $deeply->( [ $mc->exact_map(qw/0 1 2/) ], [qw/-2 -1 0/], 'exact map' );
-isa_ok( $mc->exact_map_reset,   'Music::Canon' );
+isa_ok( $mc->exact_map_reset, 'Music::Canon' );
 
 # vs. individual calls for each note
 {
@@ -77,17 +86,27 @@ $deeply->(
 );
 
 $mc->set_transpose(0);
+# TODO but working things out by hand expect qw/-4 -3 -1 0/ so need to
+# double check this test and that result in detail.
 $deeply->( [ $mc->modal_map(qw/0 2 4 5/) ], [qw/-5 -3 -1 0/], 'modal map' );
 
 isa_ok( $mc->modal_map_reset, 'Music::Canon' );
 
 $deeply->( [ $mc->modal_map(qw/0 3/) ], [qw/-2 0/], 'modal chromatic' );
-dies_ok( sub { $mc->modal_map(qw/0 1/) }, 'undefined chromatic' );
+dies_ok(
+  sub {
+    my @surprise = $mc->modal_map(qw/0 1/);
+    diag "error: instead of an exception got: @surprise\n";
+  },
+  'undefined chromatic conversion'
+);
 
-# TODO longer phrase test with chromatics, leaps
+# TODO longer phrase test with chromatics, leaps - esp. over several
+# octaves, to ensure the "interval sum" boundaries (12 for octave-
+# based scales) are handle properly, esp. for chromatics around or
+# across those.
 
-# TODO test other modal maps, like pentatonic to other things, or pitch
-# sets (Forte Number support?)
+# TODO test other modal maps, like pentatonic to other things
 
 # TODO test phrases that go down vs. up, test phrases against melodic
 # minor or other scales that differ in asc vs. dsc.
@@ -147,6 +166,39 @@ $deeply->(
 $mc->set_scale_intervals( 'input', '5-35', '5-25' );
 $deeply->(
   [ $mc->get_scale_intervals('input') ],
-  [ [qw/2 2 3 2 3/], [qw/2 1 2 3 4/] ],
+  [ [qw/2 2 3 2 3/], [qw/4 3 2 1 2/] ],
   'scale intervals by Forte'
 );
+
+$mc = Music::Canon->new( non_octave_scales => 1 );
+my @run_up   = 59 .. 86;
+my @run_down = 32 .. 59;
+$deeply->( [ $mc->exact_map(@run_up) ], \@run_down, 'exact run up' );
+$mc->exact_map_reset;
+$deeply->(
+  [ $mc->exact_map( reverse @run_down ) ],
+  [ reverse @run_up ],
+  'exact run down'
+);
+
+# non_octave_scales tests - whole tone non-octave bounded is identical
+# to exact, due to the even interval spacing, and repeats at the octave.
+# However, it did uncover an edge case at the interval sum boundary of
+# modal mapping, among other bugs.
+diag "and here we start the 6-35 foo";
+$mc->set_scale_intervals( 'input',  '6-35' );
+$mc->set_scale_intervals( 'output', '6-35' );
+$deeply->(
+  [ $mc->modal_map(@run_up) ],
+  \@run_down, 'whole tone modal run up'
+);
+$mc->modal_map_reset;
+# TODO
+#$deeply->(
+#  [ $mc->modal_map(@run_down) ],
+#  \@run_up, 'whole tone modal run down'
+#);
+
+# next would be 5-25, which should *not* line up on the 12-pitch octave
+# with non-octave bounding (not that that octave has much to do with the
+# algo, perhaps mostly to see what results are produced)
