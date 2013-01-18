@@ -1,4 +1,7 @@
 #!perl
+#
+# Weaving a safety net being a tedious and thankless task in the
+# short term...
 
 use strict;
 use warnings;
@@ -11,6 +14,7 @@ my $deeply = $@ ? \&is_deeply : \&eq_or_diff;
 
 # for modal_map tests, see perldocs for chart showing where these occur
 my @major_to_major_undefined = qw/-11 -4 1 8 13 20/;
+my @mm_to_mm_undefined       = qw/-15 -11 -3 4 10 16/;
 
 ########################################################################
 #
@@ -59,7 +63,7 @@ $deeply->(
 
 ########################################################################
 #
-# Mappings
+# Exact Mappings
 
 $mc = Music::Canon->new;
 
@@ -88,7 +92,14 @@ $deeply->(
   [qw/59 60 62 63 62 59 55 62/]
 );
 
-$mc->set_transpose(0);
+########################################################################
+#
+# Modal Mappings, Major to Major
+#
+# These numbers worked out via a chart computed manually from -15 to 20.
+# (the page width of my notebook)
+
+$mc = Music::Canon->new;
 
 $deeply->(
   [ $mc->modal_map(qw/0 2 4 5 7 9 11 12 14 16 17 19/) ],
@@ -104,11 +115,16 @@ $deeply->(
 );
 $mc->modal_map_reset;
 
-# TODO also chromatics up and down
+$deeply->(
+  [ $mc->modal_map(qw/0 3 6 10 15 18/) ],
+  [qw/-18 -14 -9 -6 -2 0/], 'modal map chromatics up'
+);
+$mc->modal_map_reset;
 
-# TODO iterate over list of ones that should all fail, some in 2nd
-# octave as well
-$deeply->( [ $mc->modal_map(qw/0 3/) ], [qw/-2 0/], 'modal chromatic' );
+$deeply->(
+  [ $mc->modal_map(qw/0 -2 -6 -9 -14/) ],
+  [qw/15 10 6 3 0/], 'modal map chromatics down'
+);
 $mc->modal_map_reset;
 
 for my $i (@major_to_major_undefined) {
@@ -122,10 +138,59 @@ for my $i (@major_to_major_undefined) {
   # no per-loop-item reset as all start with 0 and then something that
   # should cause an exception
 }
+
+########################################################################
+#
+# Modal Mappings, Melodic Minor
+#
+# These numbers also worked out via a chart computed manually from -15
+# to 20 in notebook.
+
+$mc = Music::Canon->new;
+
+# melodic minor from Music::Scales and then manually
+$mc->set_scale_intervals( 'input', 'mm' );
+my @mm_via_scales = $mc->get_scale_intervals('input');
+
+$mc->set_scale_intervals(
+  'output',
+  [ 2, 1, 2, 2, 2, 2 ],
+  [ 2, 1, 2, 2, 1, 2 ]
+);
+my @mm_via_intervals = $mc->get_scale_intervals('output');
+$deeply->(
+  \@mm_via_intervals, \@mm_via_scales, 'Music::Scales vs. raw intervals'
+);
+
+$deeply->(
+  [ $mc->get_scale_intervals('input') ],
+  [ [qw/2 1 2 2 2 2 1/], [qw/2 2 1 2 2 1 2/] ],
+  'melodic minor scale intervals'
+);
+
+$deeply->(
+  [ $mc->modal_map(qw/0 1 2 3 5 6 7 8 9 11 12 13 14 15 17 18 19 20/) ],
+  [qw/-20 -19 -18 -17 -16 -14 -13 -12 -10 -9 -8 -7 -6 -5 -4 -2 -1 0/],
+  'modal map mm up'
+);
 $mc->modal_map_reset;
 
-# TODO test other modal maps, like pentatonic to other things, Forte
-# Numbers, melodic minor asc and dsc
+$deeply->(
+  [ $mc->modal_map(qw/0 -1 -2 -4 -5 -6 -7 -8 -9 -10 -12 -13 -14/) ],
+  [qw/14 13 12 11 9 8 7 6 5 3 2 1 0/],
+  'modal map mm down'
+);
+$mc->modal_map_reset;
+
+for my $i (@mm_to_mm_undefined) {
+  dies_ok(
+    sub {
+      my @surprise = $mc->modal_map( 0, $i );
+      diag "error: instead of an exception got: @surprise\n";
+    },
+    'undefined chromatic conversion'
+  );
+}
 
 ########################################################################
 #
@@ -162,21 +227,7 @@ $deeply->( [ $mc->get_modal_pitches ], [ 99, 100 ], 'lookup modal pitches' );
 
 ########################################################################
 #
-# some more set_scale_intervals tests - plenty to go wrong
-
-# melodic minor from Music::Scales and then manually
-$mc->set_scale_intervals( 'output', 'mm' );
-my @mm_via_scales = $mc->get_scale_intervals('output');
-
-$mc->set_scale_intervals(
-  'output',
-  [ 2, 1, 2, 2, 2, 2 ],
-  [ 2, 1, 2, 2, 1, 2 ]
-);
-my @mm_via_intervals = $mc->get_scale_intervals('output');
-$deeply->(
-  \@mm_via_intervals, \@mm_via_scales, 'Music::Scales vs. raw intervals'
-);
+# Yet More Tests
 
 # Forte Numbers!
 $mc->set_scale_intervals( 'input', '5-35', '5-25' );
@@ -214,8 +265,17 @@ $deeply->(
   'whole tone modal run down'
 );
 
-# next would be 5-25, which should *not* line up on the 12-pitch octave
-# with non-octave bounding (not that that octave has much to do with the
-# algo, perhaps mostly to see what results are produced)
+# TODO next would be 5-25, which should *not* line up on the 12-pitch
+# octave with non-octave bounding (not that that octave has much to do
+# with the algo, perhaps mostly to see what results are produced)
 
-plan tests => 37 + @major_to_major_undefined;
+# TODO also transpose at various points (octave, 3rd for major/major
+# where everything lines up).
+
+# TODO non-contrary motion tests (don't expect any problems but still)
+
+# TODO non-zero starting pitch? (also with transpose?)
+
+# TODO remote keys that have no overlaps, like say C Major to Db Major?
+
+plan tests => 41 + @major_to_major_undefined + @mm_to_mm_undefined;

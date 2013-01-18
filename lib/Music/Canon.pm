@@ -641,9 +641,9 @@ sum up to less than 12 to include an additional element such that the
 sum of the intervals is 12. Interval sets greater than 12 will cause an
 exception to be thrown.
 
-Enable this option only if dealing with a maqam or similar scale that
-is not bounded by the Western notion of octave. For example, the whole
-tone scale:
+Enable this option only if dealing with a maqam or similar scale that is
+not bounded by the Western notion of octave. For example, the whole tone
+scale (which is really just an expensive way to do an B<exact_map>):
 
   my $mc = Music::Canon->new( non_octave_scales => 1 );
   # or Forte Number '6-35'
