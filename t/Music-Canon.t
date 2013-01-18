@@ -3,11 +3,14 @@
 use strict;
 use warnings;
 
-use Test::More tests => 36;
+use Test::More;    # plan is down at bottom
 use Test::Exception;
 
 eval 'use Test::Differences';    # display convenience
 my $deeply = $@ ? \&is_deeply : \&eq_or_diff;
+
+# for modal_map tests, see perldocs for chart showing where these occur
+my @major_to_major_undefined = qw/-11 -4 1 8 13 20/;
 
 ########################################################################
 #
@@ -86,30 +89,43 @@ $deeply->(
 );
 
 $mc->set_transpose(0);
-# TODO but working things out by hand expect qw/-4 -3 -1 0/ so need to
-# double check this test and that result in detail.
-$deeply->( [ $mc->modal_map(qw/0 2 4 5/) ], [qw/-5 -3 -1 0/], 'modal map' );
 
+$deeply->(
+  [ $mc->modal_map(qw/0 2 4 5 7 9 11 12 14 16 17 19/) ],
+  [qw/-19 -17 -15 -13 -12 -10 -8 -7 -5 -3 -1 0/],
+  'modal map diatonics up'
+);
 isa_ok( $mc->modal_map_reset, 'Music::Canon' );
 
-$deeply->( [ $mc->modal_map(qw/0 3/) ], [qw/-2 0/], 'modal chromatic' );
-dies_ok(
-  sub {
-    my @surprise = $mc->modal_map(qw/0 1/);
-    diag "error: instead of an exception got: @surprise\n";
-  },
-  'undefined chromatic conversion'
+$deeply->(
+  [ $mc->modal_map(qw/0 -1 -3 -5 -7 -8 -10 -12 -13 -15/) ],
+  [qw/16 14 12 11 9 7 5 4 2 0/],
+  'modal map diatonics down'
 );
+$mc->modal_map_reset;
 
-# TODO longer phrase test with chromatics, leaps - esp. over several
-# octaves, to ensure the "interval sum" boundaries (12 for octave-
-# based scales) are handle properly, esp. for chromatics around or
-# across those.
+# TODO also chromatics up and down
 
-# TODO test other modal maps, like pentatonic to other things
+# TODO iterate over list of ones that should all fail, some in 2nd
+# octave as well
+$deeply->( [ $mc->modal_map(qw/0 3/) ], [qw/-2 0/], 'modal chromatic' );
+$mc->modal_map_reset;
 
-# TODO test phrases that go down vs. up, test phrases against melodic
-# minor or other scales that differ in asc vs. dsc.
+for my $i (@major_to_major_undefined) {
+  dies_ok(
+    sub {
+      my @surprise = $mc->modal_map( 0, $i );
+      diag "error: instead of an exception got: @surprise\n";
+    },
+    'undefined chromatic conversion'
+  );
+  # no per-loop-item reset as all start with 0 and then something that
+  # should cause an exception
+}
+$mc->modal_map_reset;
+
+# TODO test other modal maps, like pentatonic to other things, Forte
+# Numbers, melodic minor asc and dsc
 
 ########################################################################
 #
@@ -181,11 +197,10 @@ $deeply->(
   'exact run down'
 );
 
-# non_octave_scales tests - whole tone non-octave bounded is identical
-# to exact, due to the even interval spacing, and repeats at the octave.
-# However, it did uncover an edge case at the interval sum boundary of
-# modal mapping, among other bugs.
-diag "and here we start the 6-35 foo";
+# non_octave_scales tests - whole tone non-octave bounded modal_map is
+# identical to exact_map (only more expensive to compute), due to the
+# even interval spacing. However, it did uncover an edge case at the
+# interval sum boundary of modal mapping, among other bugs.
 $mc->set_scale_intervals( 'input',  '6-35' );
 $mc->set_scale_intervals( 'output', '6-35' );
 $deeply->(
@@ -193,12 +208,14 @@ $deeply->(
   \@run_down, 'whole tone modal run up'
 );
 $mc->modal_map_reset;
-# TODO
-#$deeply->(
-#  [ $mc->modal_map(@run_down) ],
-#  \@run_up, 'whole tone modal run down'
-#);
+$deeply->(
+  [ $mc->modal_map( reverse @run_down ) ],
+  [ reverse @run_up ],
+  'whole tone modal run down'
+);
 
 # next would be 5-25, which should *not* line up on the 12-pitch octave
 # with non-octave bounding (not that that octave has much to do with the
 # algo, perhaps mostly to see what results are produced)
+
+plan tests => 37 + @major_to_major_undefined;

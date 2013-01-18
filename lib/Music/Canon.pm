@@ -548,6 +548,10 @@ pitch cannot be converted. I<phrase> may be a list or an array
 reference, and may contain raw pitch numbers, objects that support a
 B<pitch> method, or other data that will be passed through unchanged.
 
+NOTE B<modal_map> is somewhat experimental, so likely has edge cases or
+bugs unknown to me. Consult the tests under the module distribution
+C<t/> directory for what cases are covered.
+
 The algorithm operates by converting the intervals between the notes
 into diatonic steps via the input mode, then replicates that many steps
 in the output mode, followed by any necessary chromatic adjustments. The
@@ -556,21 +560,22 @@ setting, or via pitches set via the B<set_modal_pitches> method) form
 the point of linkage between the two arbitrary scales or modes or really
 arbitrary interval sequences.
 
-An example may help illustrate this function. By default, the Major
-scale to the Major scale conversion is used, which, with other defaults
-set by this module (contrary motion is the default), uses something like
-the following chart to convert notes:
+An example may help illustrate this function. Assuming Major to Major
+conversion, contrary motion, and a transposition by an octave (12
+semitones), the software will convert pitches as shown in this chart:
 
+        0    1    2   3    4   5   6    7   8    9   10  11  12
   In  | C  | c# | D | d# | E | F | f# | G | g# | A | a# | B | C' |
   Out | C' | x  | B | a# | A | G | f# | F | x  | E | d# | D | C  |
+       12        11   10   9   7   6    5        4   3    2   0
 
 Assuming an input phrase of C<C G c#>, the output phrase would be C<C'
 F> and then an exception would be thrown, as there is no way to convert
-C<c#> using this mapping and transposition. Other mappings and
+C<c#> using this modal mapping and transposition. Other mappings and
 transpositions will have between zero to several notes that cannot be
 converted.
 
-B<modal_map> is affected by various things, notably B<set_contrary>,
+B<modal_map> is affected by various settings, notably B<set_contrary>,
 B<set_modal_pitches>, B<set_retrograde>, B<set_scale_intervals>, and
 B<set_transpose>.
 
@@ -697,7 +702,7 @@ method calls.
 =item B<set_scale_intervals> I<layer>, I<asc>, [I<dsc>]
 
 Sets the scale intervals for the indicated I<layer> (C<input> or
-C<output>). The I<asc> (and optional I<dsc>) can be a number of
+C<output>). The I<asc> (and optional I<dsc>) can be one of several
 different things:
 
   $mc->set_scale_intervals('input', 'minor');  # Music::Scales
