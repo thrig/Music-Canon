@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 #
-# Modal canon brute forcer (one could add more modes, or even run
-# through all the different Forte Numbers or whatever...)
+# Modal canon brute forcer.
 
 use strict;
 use warnings;
@@ -11,23 +10,35 @@ use List::Util qw/min/;
 use Music::Canon        ();
 use Music::LilyPondUtil ();
 
+# Notes to iterate over (0..23 or similar might make output easier to
+# grep for particular patterns, as that way both the input and output
+# will cover particular pitch patterns in the output).
+my @input = 0 .. 11;
+
+# What modes to generate notes for (via Music::Scales, could also try
+# Forte Numbers or supply list of array refs, see Music::Canon docs on
+# set_scale_intervals for details).
+my @modes =
+  qw/ionian dorian phrygian lydian mixolydian aeolian locrian hm mm/;
+
+# Probably nothing to fiddle with below here, except perhaps whether to
+# retrograde or contrary, and what to transpose by, depending on the
+# need (e.g. for a contrary motion retrograde canon, probably want to
+# iterate those just being on).
+
 my $canon = Music::Canon->new;
 my $lyu   = Music::LilyPondUtil->new(
   ignore_register => 1,
-  min_pitch       => -20,
+  min_pitch       => -50,
   mode            => 'relative'
 );
 
-my @input    = 0 .. 11;
 my @in_notes = $lyu->p2ly(@input);
 my $pformat  = join ' ', ('%4s') x @input;
 my $nformat  = join ' ', ('%4s') x @input;
 
 my $in_pitch = sprintf $pformat, @input;
 my $in_notes = sprintf $nformat, @in_notes;
-
-my @modes =
-  qw/ionian dorian phrygian lydian mixolydian aeolian locrian hm mm/;
 
 for my $in_mode (@modes) {
   $canon->set_scale_intervals( 'input', $in_mode );
@@ -42,7 +53,12 @@ for my $in_mode (@modes) {
 
           my $set = gen_settings_str( $in_mode, $out_mode, $t, $c, $r );
           my @output = map_it( $canon, \@input );
-          if ( min grep defined, @output > 12 ) {
+          if ( min( grep defined, @output ) < -10 ) {
+            for my $p (@output) {
+              $p += 12 if defined $p;
+            }
+          }
+          if ( min( grep defined, @output ) > 10 ) {
             for my $p (@output) {
               $p -= 12 if defined $p;
             }
