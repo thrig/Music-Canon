@@ -18,6 +18,17 @@ my @input = 0 .. 11;
 # What modes to generate notes for (via Music::Scales, could also try
 # Forte Numbers or supply list of array refs, see Music::Canon docs on
 # set_scale_intervals for details).
+#
+# Yet another option would be to vary the ascending vs. descending modes
+# used, in addition to the varying input and output modes, though that
+# would require ascending and descending input material to fully
+# explore, and would generate stupidly larger amounts of output. A
+# better option might be to devise a specific question to be answered,
+# for example: "what are the possibilities when using ♭VII in a
+# descending line for various corresponding output ascending modes when
+# composing a contrary motion retrograde canon?" And then write code to
+# explore that specific space. Which was exactly the question that
+# prompted this entire module.
 my @modes =
   qw/ionian dorian phrygian lydian mixolydian aeolian locrian hm mm/;
 
