@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+#
+# Modal canon brute forcer (one could add more modes, or even run
+# through all the different Forte Numbers or whatever...)
+
+use strict;
+use warnings;
+
+use List::Util qw/min/;
+
+use Music::Canon        ();
+use Music::LilyPondUtil ();
+
+my $canon = Music::Canon->new;
+my $lyu   = Music::LilyPondUtil->new(
+  ignore_register => 1,
+  min_pitch       => -20,
+  mode            => 'relative'
+);
+
+my @input    = 0 .. 11;
+my @in_notes = $lyu->p2ly(@input);
+my $pformat   = join ' ', ('%4s') x @input;
+my $nformat   = join ' ', ('%4s') x @input;
+
+my $in_pitch = sprintf $pformat, @input;
+my $in_notes = sprintf $nformat, @in_notes;
+
+my @modes =
+  qw/ionian dorian phrygian lydian mixolydian aeolian locrian hm mm/;
+
+for my $in_mode (@modes) {
+  $canon->set_scale_intervals( 'input', $in_mode );
+  for my $out_mode (@modes) {
+    $canon->set_scale_intervals( 'output', $out_mode );
+    for my $t ( 0 .. 11 ) {
+      $canon->set_transpose($t);
+      for my $c ( 0 .. 1 ) {
+        $canon->set_contrary($c);
+        for my $r ( 0 .. 1 ) {
+          $canon->set_retrograde($r);
+
+          my $set = gen_settings_str( $in_mode, $out_mode, $t, $c, $r );
+          my @output = map_it( $canon, \@input );
+          if ( min grep defined, @output > 12 ) {
+            for my $p (@output) {
+              $p -= 12 if defined $p;
+            }
+          }
+          @output = map { defined() ? $_ : 'x' } @output;
+          my @out_notes = $lyu->p2ly(@output);
+
+          my $out_pitch = sprintf $pformat, @output;
+          my $out_notes = sprintf $nformat, @out_notes;
+
+          print "$set\n";
+          print "$in_pitch\n";
+          print "$out_pitch\n";
+          print "$in_notes\n";
+          print "$out_notes\n\n";
+        }
+      }
+    }
+  }
+}
+
+sub gen_settings_str {
+  my ( $in, $out, $t, $c, $r ) = @_;
+  return "in=$in out=$out t=$t c=$c r=$r";
+}
+
+sub map_it {
+  my ( $canon, $scale ) = @_;
+
+  my @new_phrase;
+  for my $n (@$scale) {
+    my $result;
+    eval { $result = $canon->modal_map($n) };
+    if ( $@ and $@ =~ m/undefined chromatic conversion/ ) {
+      $result = undef;
+    }
+    push @new_phrase, $result;
+  }
+  @new_phrase = reverse @new_phrase if $canon->get_retrograde;
+  $canon->modal_map_reset;
+
+  return @new_phrase;
+}
