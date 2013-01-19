@@ -20,8 +20,8 @@ my $lyu   = Music::LilyPondUtil->new(
 
 my @input    = 0 .. 11;
 my @in_notes = $lyu->p2ly(@input);
-my $pformat   = join ' ', ('%4s') x @input;
-my $nformat   = join ' ', ('%4s') x @input;
+my $pformat  = join ' ', ('%4s') x @input;
+my $nformat  = join ' ', ('%4s') x @input;
 
 my $in_pitch = sprintf $pformat, @input;
 my $in_notes = sprintf $nformat, @in_notes;
@@ -54,10 +54,10 @@ for my $in_mode (@modes) {
           my $out_notes = sprintf $nformat, @out_notes;
 
           print "$set\n";
-          print "$in_pitch\n";
-          print "$out_pitch\n";
-          print "$in_notes\n";
-          print "$out_notes\n\n";
+          print "in\t$in_pitch\n";
+          print "out\t$out_pitch\n";
+          print "in\t$in_notes\n";
+          print "out\t$out_notes\n\n";
         }
       }
     }
