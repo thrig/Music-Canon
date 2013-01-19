@@ -270,6 +270,8 @@ sub new {
   bless $self, $class;
 
   eval {
+    # XXX there is no way to set the descending mode via this interface,
+    # think about how to do that here.
     if ( exists $param{input} ) {
       $self->set_scale_intervals( 'input', $param{input} );
     }
