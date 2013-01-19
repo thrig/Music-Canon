@@ -16,7 +16,7 @@ use Music::LilyPondUtil ();    # transpose convenience
 use Music::Scales qw/get_scale_nums is_scale/;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 # NOTE a new() param, below, but I have not thought about what changing
 # it would actually do. Use the $self entry in all subsequent code.
@@ -431,7 +431,7 @@ Music::Canon - routines for musical canon construction
 
 =head1 SYNOPSIS
 
-  use Music::Canon;
+  use Music::Canon ();
   my $mc = Music::Canon->new;
 
   # options affecting all the *_map routines
