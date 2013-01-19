@@ -1,6 +1,8 @@
 # -*- Perl -*-
 #
-# routines for musical canon construction
+# Routines for musical canon construction. See also C<canonical> of
+# the L<App::MusicTools> module for a command line tool interface to
+# this code.
 
 package Music::Canon;
 
@@ -460,7 +462,9 @@ Music::Canon - routines for musical canon construction
   $mc->set_scale_intervals( 'input',  'minor'  );
   $mc->set_scale_intervals( 'output', 'dorian' );
 
-And more!
+See also C<canonical> of the L<App::MusicTools> module for a command
+line tool interface to this code, and the C<eg/> and C<t/> directories
+of this distribution for more example code.
 
 =head1 DESCRIPTION
 
@@ -767,8 +771,8 @@ L<http://en.wikipedia.org/wiki/Forte_number>
 L<Music::AtonalUtil>, L<Music::LilyPondUtil>, L<Music::Scales>,
 L<Music::Tension>
 
-The C<scalemogrifier> utility of L<App::MusicTools> may also be
-of interest.
+The C<canonical> and C<scalemogrifier> utilities of L<App::MusicTools>
+may also be of interest.
 
 =head1 AUTHOR
 
