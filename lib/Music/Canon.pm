@@ -324,43 +324,49 @@ sub set_scale_intervals {
   if ( !defined $layer or ( $layer ne 'input' and $layer ne 'output' ) ) {
     croak "unsupported layer (must be 'input' or 'output')\n";
   }
-
-  # reset anything extant as some methods push
-  $self->{$layer}->{1}  = [];
-  $self->{$layer}->{-1} = [];
+  if ( !defined $asc and !defined $dsc ) {
+    croak "must define one of asc or dsc or both\n";
+  }
 
   my $is_scale = 0;
-  if ( ref $asc eq 'ARRAY' ) {
-    # Assume arbitrary list of intervals as integers if array ref
-    for my $n (@$asc) {
-      croak "ascending intervals must be integers\n"
-        unless looks_like_number $n and $n =~ m/^[+-]?\d+$/;
-    }
-    $self->{$layer}->{1} = $asc;
+  if ( defined $asc ) {
 
-  } elsif ( $asc =~ m/($FORTE_NUMBER_RE)/ ) {
-    # derive scale intervals from pitches of the named Forte Number
-    my $pset = $self->{_atu}->forte2pcs($1);
-    croak "no such Forte Number" unless defined $pset;
-
-    $self->{$layer}->{1} = $self->{_atu}->pcs2intervals($pset);
-
-  } else {
-    # derive intervals via scale name via third-party module
-    croak "ascending scale unknown to Music::Scales\n" unless is_scale($asc);
-    my @asc_nums = get_scale_nums($asc);
-    my @dsc_nums;
-    @dsc_nums = get_scale_nums( $asc, 1 ) unless defined $dsc;
-
-    for my $i ( 1 .. $#asc_nums ) {
-      push @{ $self->{$layer}->{1} }, $asc_nums[$i] - $asc_nums[ $i - 1 ];
-    }
-    if (@dsc_nums) {
-      for my $i ( 1 .. $#dsc_nums ) {
-        push @{ $self->{$layer}->{-1} }, $dsc_nums[ $i - 1 ] - $dsc_nums[$i];
+    if ( ref $asc eq 'ARRAY' ) {
+      # Assume arbitrary list of intervals as integers if array ref
+      for my $n (@$asc) {
+        croak "ascending intervals must be integers\n"
+          unless looks_like_number $n and $n =~ m/^[+-]?\d+$/;
       }
+      $self->{$layer}->{1} = $asc;
+
+    } elsif ( $asc =~ m/($FORTE_NUMBER_RE)/ ) {
+      # derive scale intervals from pitches of the named Forte Number
+      my $pset = $self->{_atu}->forte2pcs($1);
+      croak "no such Forte Number" unless defined $pset;
+
+      $self->{$layer}->{1} = $self->{_atu}->pcs2intervals($pset);
+
+    } else {
+      # derive intervals via scale name via third-party module
+      croak "ascending scale unknown to Music::Scales\n"
+        unless is_scale($asc);
+      my @asc_nums = get_scale_nums($asc);
+      my @dsc_nums;
+      @dsc_nums = get_scale_nums( $asc, 1 ) unless defined $dsc;
+
+      $self->{$layer}->{1} = [];
+      for my $i ( 1 .. $#asc_nums ) {
+        push @{ $self->{$layer}->{1} }, $asc_nums[$i] - $asc_nums[ $i - 1 ];
+      }
+      if (@dsc_nums) {
+        $self->{$layer}->{-1} = [];
+        for my $i ( 1 .. $#dsc_nums ) {
+          push @{ $self->{$layer}->{-1} },
+            $dsc_nums[ $i - 1 ] - $dsc_nums[$i];
+        }
+      }
+      $is_scale = 1;
     }
-    $is_scale = 1;
   }
 
   if ( !defined $dsc ) {
@@ -390,6 +396,7 @@ sub set_scale_intervals {
         unless is_scale($dsc);
       my @dsc_nums = get_scale_nums( $dsc, 1 );
 
+      $self->{$layer}->{-1} = [];
       for my $i ( 1 .. $#dsc_nums ) {
         push @{ $self->{$layer}->{-1} }, $dsc_nums[ $i - 1 ] - $dsc_nums[$i];
       }
@@ -712,7 +719,11 @@ different things:
 
 If the I<dsc> is undefined, the corresponding I<asc> intervals will be
 used, except for L<Music::Scales>, for which the descending intervals
-associated with the ascending scale will be used.
+associated with the ascending scale will be used. If I<asc> is
+undefined, I<dsc> must then be set to something. This allows the
+descending intervals alone to be adjusted.
+
+  $mc->set_scale_intervals('output', undef, 'aeolian');
 
 Note that the descending intervals must be ordered from the highest
 pitch down. That is, melodic minor can be stated manually via:
