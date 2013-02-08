@@ -26,8 +26,8 @@ my $mc = Music::Canon->new;
 # (the page width of my notebook)
 
 $deeply->(
-  [ $mc->modal_map(qw/0 2 4 5 7 9 11 12 14 16 17 19/) ],
-  [qw/-19 -17 -15 -13 -12 -10 -8 -7 -5 -3 -1 0/],
+  [ $mc->modal_map(qw/0 0 2 2 4 5 7 9 11 12 14 16 17 19/) ],
+  [qw/-19 -17 -15 -13 -12 -10 -8 -7 -5 -3 -1 -1 0 0/],
   'modal map diatonics up'
 );
 isa_ok( $mc->modal_map_reset, 'Music::Canon' );
@@ -117,16 +117,13 @@ $mc->modal_map_reset;
 isa_ok( $mc->set_modal_pitches( 72, 72 ), 'Music::Canon' );
 $deeply->( [ $mc->get_modal_pitches ], [ 72, 72 ], 'lookup modal pitches' );
 
-$deeply->(
-  [ $mc->modal_map(qw/75 74/) ], [qw/71 68/], 'yay bugs for 75 74'
-);
+$deeply->( [ $mc->modal_map(qw/75 74/) ], [qw/71 68/], 'yay bugs for 75 74' );
 $mc->modal_map_reset;
 
-#$deeply->(
-#  [ $mc->modal_map(qw/80 79/) ], [qw/65 64/], 'yay bugs'
-#);
-#$mc->modal_map_reset;
+$deeply->( [ $mc->modal_map(qw/80 79/) ], [qw/65 64/], 'yay bugs' );
+$mc->modal_map_reset;
 
+# TODO work out what output expected to be by hand
 #$deeply->(
 #  [ $mc->modal_map(
 #      qw/75 71 72 74 75 74 75 77 79 80 79 84 83 84 80 79 77 80 79 77 75 74 75 77 79 77 79 80 77 79 77 75 74 75 74 72 71 72 74 75 74 75 77 79 77 79 80 77 84 82 80 79 80 79 77 75 77 75 74 72 74 75 71 72/
@@ -140,8 +137,8 @@ $mc->modal_map_reset;
 for my $i (@mm_to_mm_undefined) {
   dies_ok(
     sub {
-      my @surprise = $mc->modal_map( 0, $i );
-      diag "error: instead of an exception got: @surprise for (0,$i)\n";
+      my @surprise = grep defined, $mc->modal_map( 0, $i );
+      diag "error: instead of an exception got: '@surprise' for (0,$i)\n";
     },
     'undefined chromatic conversion'
   );
@@ -181,4 +178,4 @@ $deeply->(
 
 # TODO remote keys that have no overlaps, like say C Major to Db Major?
 
-plan tests => 15 + @major_to_major_undefined + @mm_to_mm_undefined;
+plan tests => 16 + @major_to_major_undefined + @mm_to_mm_undefined;
