@@ -459,7 +459,8 @@ sub set_scale_intervals {
   # to I interval, and who knows what a custom list would contain).
   if ( !$self->{_non_octave_scales} ) {
     my $asc_sum = sum @{ $self->{$layer}->{1} };
-    # TODO dup code, loop over refs and deal with both since ordering the same again
+    # TODO dup code, loop over refs and deal with both since ordering
+    # the same again
     if ( $asc_sum < $self->{_DEG_IN_SCALE} ) {
       push @{ $self->{$layer}->{1} }, $self->{_DEG_IN_SCALE} - $asc_sum;
     } elsif ( $asc_sum > $self->{_DEG_IN_SCALE} ) {
@@ -472,21 +473,6 @@ sub set_scale_intervals {
       croak "non-octave scales require non_octave_scales param\n";
     }
   }
-
-  # DBG figure out if asc differs from dsc, record that for potential
-  # use in modal_map
-  my $dir_differs = 0;
-  if ( @{ $self->{$layer}->{1} } != @{ $self->{$layer}->{1} } ) {
-    $dir_differs = 1;
-  } else {
-    for my $i ( 0 .. $#{ $self->{$layer}->{1} } ) {
-      if ( $self->{$layer}->{1}->[$i] != $self->{$layer}->{-1}->[$i] ) {
-        $dir_differs = 1;
-        last;
-      }
-    }
-  }
-  $self->{$layer}->{_asym} = $dir_differs ? 1 : 0;
 
   return $self;
 }
