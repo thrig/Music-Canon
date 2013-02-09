@@ -18,7 +18,7 @@ use Music::LilyPondUtil ();    # transpose convenience
 use Music::Scales qw/get_scale_nums is_scale/;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '0.31';
+our $VERSION = '0.4';
 
 # NOTE a new() param, below, but I have not thought about what changing
 # it would actually do. Use the $self entry in all subsequent code.
@@ -96,7 +96,6 @@ sub get_contrary { $_[0]->{_contrary} }
 
 sub get_modal_pitches {
   my ($self) = @_;
-
   return $self->{_modal}->{input_tonic}, $self->{_modal}->{output_tonic};
 }
 
@@ -156,11 +155,10 @@ sub modal_map {
     $self->{_modal}->{input_tonic} = $pitch
       unless defined $self->{_modal}->{input_tonic};
 
-    # Transpose is applied to input pitch prior to any modal mapping (it
-    # could be argued that the transpose should happen afterwards
-    # (T(M(p)) vs. this M(T(p))), but the caller could effect that via
-    # set_tranpose(0) and then += $t on the output pitches).
-    my $trans;
+    # Output tonic set based on transposed pitch, as might be mapping c'
+    # to c'' via transpose of 12 in which case want MIDI 60 for the
+    # input tonic and then MIDI 72 for the output tonic.
+    my $trans = 0;
     if ( !looks_like_number( $self->{_transpose} ) ) {
       eval {
         $trans = $self->{_lyu}->notes2pitches( $self->{_transpose} ) - $pitch;
@@ -169,14 +167,7 @@ sub modal_map {
     } else {
       $trans = $self->{_transpose};
     }
-    $pitch += $trans;
-
-    # Output tonic set based on transposed pitch, as might be mapping c'
-    # to c'' via transpose of 12 in which case want MIDI 60 for the
-    # input tonic and then MIDI 72 for the output tonic. But I'm not
-    # sure about this, so docs recommend set_transpose(0) and explicit
-    # tonics via set_modal_pitches.
-    $self->{_modal}->{output_tonic} = $pitch
+    $self->{_modal}->{output_tonic} = $self->{_modal}->{input_tonic} + $trans
       unless defined $self->{_modal}->{output_tonic};
 
     my $new_pitch;
@@ -366,6 +357,12 @@ sub set_modal_pitches {
     if ( defined $input_pitch ) {
       $self->{_modal}->{input_tonic} =
         $self->{_lyu}->notes2pitches($input_pitch);
+      # reset output if something prior there so not carrying along
+      # something from a previous conversion
+      if ( defined $self->{_modal}->{output_tonic}
+        and !defined $output_pitch ) {
+        undef $self->{_modal}->{output_tonic};
+      }
     }
     if ( defined $output_pitch ) {
       $self->{_modal}->{output_tonic} =
@@ -513,6 +510,7 @@ Music::Canon - routines for musical canon construction
   # or instead modal mapping by scale name (via Music::Scales)
   $mc->set_scale_intervals( 'input',  'minor'  );
   $mc->set_scale_intervals( 'output', 'dorian' );
+  @new_phrase = $mc->modal_map(qw/0 7 4 0 -1 0/);
 
 See also C<canonical> of the L<App::MusicTools> module for a command
 line tool interface to this code, and the C<eg/> and C<t/> directories
@@ -585,8 +583,10 @@ Returns the current contrary setting (boolean).
 
 =item B<get_modal_pitches>
 
-Returns the current modal input and output layer starting pitches (these
-will be undefined if unset).
+Returns the current modal input and output layer starting pitches used
+by B<modal_map>. These will be undefined if unset, or might have values
+leftover from some previous conversion, unless reset via
+B<reset_modal_pitches>.
 
 =item B<get_retrograde>
 
@@ -644,11 +644,9 @@ setting, or via pitches set via the B<set_modal_pitches> method) form
 the point of linkage between the two scales or really any arbitrary
 interval sequences.
 
-Transposition (via B<set_transpose>), if any, is done prior to the modal
-mapping, though does influence the output modal pitch. If in doubt, set
-the transpose to zero (the default), explicitly setup the modal pitches
-(via B<set_modal_pitches>), and then perform any necessary raw
-transpositions before or after the modal mapping.
+Transposition (via B<set_transpose>) will influence the output linking
+pitch, unless that value was already set via a prior conversion or
+B<set_modal_pitches> call.
 
 An example may help illustrate this function. Assuming Major to
 Major conversion, contrary motion, and a transposition by an octave
@@ -781,10 +779,12 @@ input phrase.
 Returns the L<Music::Canon> object, so can be chained with other
 method calls.
 
-=item B<set_modal_pitches> I<input_tonic>, I<output_tonic>
+=item B<set_modal_pitches> I<input_tonic>, [ I<output_tonic> ]
 
 Sets the tonic note or pitch of the input and output interval sets used
-by B<modal_map>.
+by B<modal_map>. If the I<input_tonic> is set, but not the optional
+I<output_tonic>, the cached I<output_tonic> value, if any, will be
+wiped out.
 
   $mc->set_modal_pitches(60, 62);
   $mc->set_modal_pitches(undef, 64);  # just output start pitch
