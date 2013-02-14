@@ -211,4 +211,69 @@ $deeply->(
 
 # TODO remote keys that have no overlaps, like say C Major to Db Major?
 
-plan tests => 25 + @major_to_major_undefined + @mm_to_mm_undefined;
+########################################################################
+#
+# chrome handling, also tricky, but only if the magnitude of an interval
+# is greater than two (hungarian minor or for six-or-fewer note scales).
+
+# C cis D -> Bes x B as there's no space between output pitch numbers 10
+# and 11, regardless of how the chromes are handled.
+sub impossible {
+  $mc->set_modal_pitches( 0, 10 );
+  $mc->set_scale_intervals( 'output', [ 1, 4, 1, 4 ] );
+  dies_ok(
+    sub {
+      my $surprise = $mc->modal_map(1);
+      diag "error: instead of an exception got: $surprise for 1\n";
+    },
+    'undefined chromatic conversion'
+  );
+}
+
+# interval of 2 and chrome of 1 means there is only one option for the chrome
+sub always_one {
+  $mc->set_modal_pitches( 0, 8 );
+  $mc->set_scale_intervals( 'output', [ 2, 1, 4, 1 ] );
+  $deeply->( [ $mc->modal_map(1) ], [9], 'chrome +1' );
+  $mc->modal_map_reset;
+}
+
+sub middle {
+  $mc->set_modal_pitches( 48, 59 );
+  $mc->set_scale_intervals( 'output', [ 4,1,4,2 ] );
+  $deeply->( [$mc->modal_map(49)], [61], 'somewhere in middle' );
+  $mc->modal_map_reset;
+}
+
+$mc = Music::Canon->new( contrary => 0, retrograde => 0 );
+impossible();
+always_one();
+middle();
+
+$mc = Music::Canon->new( chrome_weight => 0, contrary => 0, retrograde => 0 );
+impossible();
+always_one();
+middle();
+
+$mc = Music::Canon->new( chrome_weight => -1, contrary => 0, retrograde => 0 );
+impossible();
+always_one();
+  $mc->set_modal_pitches( 48, 59 );
+  $mc->set_scale_intervals( 'output', [ 4,1,4,2 ] );
+  $deeply->( [$mc->modal_map(49)], [60], 'negative literal' );
+  $mc->modal_map_reset;
+
+$mc = Music::Canon->new( chrome_weight => 1, contrary => 0, retrograde => 0 );
+impossible();
+always_one();
+  $mc->set_modal_pitches( 48, 59 );
+  $mc->set_scale_intervals( 'output', [ 4,1,4,2 ] );
+  $deeply->( [$mc->modal_map(49)], [62], 'positive literal' );
+  $mc->modal_map_reset;
+
+# TODO test and document negative interval steps (for exotic "scales"
+# comprised of for example the intervals [-5,7]).
+
+########################################################################
+
+plan tests => 37 + @major_to_major_undefined + @mm_to_mm_undefined;
