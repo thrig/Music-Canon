@@ -586,7 +586,9 @@ search for suitable material.
 
 The methods of this module at present suit crab canon, as those lines
 are relatively easy to calculate. Other forms of canon would ideally
-require a counterpoint module, which has not yet been written.
+require a counterpoint module, which has not yet been written. The
+B<modal_map> method also suits the calculation of new voices of a fugue,
+for example converting the subject to the dominant.
 
 Knowledge of canon will doubtless help any user of this module; the
 L</"SEE ALSO"> section lists resources for learning these.
