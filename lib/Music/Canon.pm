@@ -18,7 +18,7 @@ use Music::LilyPondUtil ();    # transpose convenience
 use Music::Scales qw/get_scale_nums is_scale/;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 
 # NOTE a new() param, below, but I have not thought about what changing
 # it would actually do. Use the $self entry in all subsequent code.
