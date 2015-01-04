@@ -18,7 +18,7 @@ my %params = (
   AUTHOR       => 'Jeremy Mates <jmates@cpan.org>',
   VERSION_FROM => 'lib/Music/Canon.pm',
 
-  LICENSE  => 'perl',
+  LICENSE  => 'artistic_2',
   PL_FILES => {},
 
   CONFIGURE_REQUIRES => {

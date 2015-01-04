@@ -8,11 +8,14 @@ For the source code, see:
 
 http://github.com/thrig/Music-Canon
 
-which can be installed once git and cpanm are installed by e.g.
+This can be built and installed by running:
 
-  git clone https://github.com/thrig/Music-Canon
-  cd Music-Canon
-  cpanm .
+  perl Makefile.PL
+  make
+  make test
+  make install
+
+Run perldoc(1) on Music::Canon for more documentation.
 
 DEPENDENCIES
 
@@ -22,8 +25,7 @@ writing canons.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2013,2014 Jeremy Mates
+Copyright (C) 2013-2015 Jeremy Mates
 
-This library is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself, either Perl version 5.16 or, at your option, any
-later version of Perl 5 you may have available.
+This module is free software; you can redistribute it and/or modify it
+under the Artistic License (2.0).

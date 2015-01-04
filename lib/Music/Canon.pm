@@ -1,8 +1,9 @@
 # -*- Perl -*-
 #
 # Routines for musical canon construction. See also C<canonical> of the
-# L<App::MusicTools> module for a command line tool interface to this code, and
-# the eg/ directory of this module's distribution for other example scripts.
+# L<App::MusicTools> module for a command line tool interface to this
+# code, and the eg/ directory of this module's distribution for other
+# example scripts.
 #
 # Run perldoc(1) on this file for additional documentation.
 
@@ -17,10 +18,10 @@ use Music::Scales qw/get_scale_nums is_scale/;
 use namespace::clean;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '2.01';
+our $VERSION = '2.02';
 
-# Array indices for ascending versus descending scales (as some minor scales
-# are different, depending)
+# Array indices for ascending versus descending scales (as some minor
+# scales are different, depending)
 my $ASC = 0;
 my $DSC = 1;
 
@@ -95,9 +96,9 @@ has modal_out => (
   predicate => 1,
 );
 
-# these have custom setters as support Forte Numbers and other such cases
-# difficult to put into a simple coerce sub, so the user-facing setter are
-# really the set_modal_scale_* subs.
+# These have custom setters as support Forte Numbers and other such
+# cases difficult to put into a simple coerce sub, so the user-facing
+# setter are really the set_modal_scale_* subs.
 has modal_scale_in => (
   is        => 'rw',
   clearer   => 1,
@@ -154,7 +155,7 @@ sub BUILD {
     if !$self->has_modal_scale_out;
 }
 
-# one-to-one interval mapping, though with the contrary, retrograde, and
+# One-to-one interval mapping, though with the contrary, retrograde, and
 # transpose parameters as possible influences on the results.
 sub exact_map {
   my $self = shift;
@@ -238,12 +239,12 @@ sub modal_map {
   }
 
   my $input_mode = $self->modal_scale_in;
-  # local copy of the output scale in the event transposition forces a rotation
-  # of the intervals
+  # local copy of the output scale in the event transposition forces a
+  # rotation of the intervals
   my $output_mode = $self->modal_scale_out;
 
-  # but have to wait until have the first pitch as might be transposing to a
-  # note instead of by some number
+  # but have to wait until have the first pitch as might be transposing
+  # to a note instead of by some number
   my $trans;
   my $rotate_by     = 0;
   my $rotate_chrome = 0;
@@ -272,15 +273,16 @@ sub modal_map {
       $new_pitch = $prev_out;
 
     } else {
-      # Interval sets are useless without being tied to some pitch, assume this
-      # is the first note of the phrase if not already set.
+      # Interval sets are useless without being tied to some pitch,
+      # assume this is the first note of the phrase if not already set.
       $input_tonic = $pitch unless defined $input_tonic;
 
-      # NOTE output tonic is not longer set based on transposed pitch (as of
-      # v1.00); use set_modal_pitches() to specify as necessary. This change
-      # motivated by transpose not really working everywhere. Instead, output
-      # tonic by default is the same as the input tonic (so the input and
-      # output modes share the same root pitch by default).
+      # NOTE output tonic is not longer set based on transposed pitch
+      # (as of v1.00); use set_modal_pitches() to specify as necessary.
+      # This change motivated by transpose not really working
+      # everywhere. Instead, output tonic by default is the same as the
+      # input tonic (so the input and output modes share the same root
+      # pitch by default).
       $output_tonic = $input_tonic unless defined $output_tonic;
 
       if ( !defined $trans ) {
@@ -294,9 +296,9 @@ sub modal_map {
 
         if ( $trans != 0 ) {
           # Steps must be from input tonic to first note of phrase plus
-          # transposition, as if in Bflat-Major if one has a phrase that begins
-          # on "D" being moved to "Eflat" that transposition is modal, and not
-          # chromatic.
+          # transposition, as if in Bflat-Major if one has a phrase that
+          # begins on "D" being moved to "Eflat" that transposition is
+          # modal, and not chromatic.
           ( $rotate_by, $rotate_chrome ) =
             ( $self->steps( $input_tonic, $input_tonic + $trans, $input_mode->[$ASC] ) )
             [ 0, 1 ];
@@ -304,16 +306,16 @@ sub modal_map {
           $rotate_by *= -1;
 
           if ( $rotate_chrome != 0 ) {
-            die "transpose to chromatic pitch is as yet unsupported";
+            die "transpose to chromatic pitch unsupported by modal_map()";
           }
 
-          # Transpositions require rotation of the output mode to match where
-          # the starting pitch of the phrase lies in the output mode, as
-          # otherwise for c-minor to c-minor, transposing from C to E-flat,
-          # would for an input phrase of C->Bb->Ab get the C->Bb->Ab intervals
-          # instead of those for Eb->D->C. That is, the output would become
-          # E-flat minor by virtue of the transposition without the rotation
-          # done here.
+          # Transpositions require rotation of the output mode to match
+          # where the starting pitch of the phrase lies in the output
+          # mode, as otherwise for c-minor to c-minor, transposing from
+          # C to E-flat, would for an input phrase of C->Bb->Ab get the
+          # C->Bb->Ab intervals instead of those for Eb->D->C. That is,
+          # the output would become E-flat minor by virtue of the
+          # transposition without the rotation done here.
           if ( $rotate_by != 0 ) {
             $output_mode->[$ASC] =
               $self->atonal->rotate( $rotate_by, $output_mode->[$ASC] );
@@ -323,10 +325,11 @@ sub modal_map {
         }
       }
 
-      # Determine whether input must be figured on the ascending or descending
-      # scale intervals; descending intervals only if there is a previous pitch
-      # and if the delta from that previous pitch shows descending motion,
-      # otherwise ascending. The scales are [[asc],[dsc]] AoA.
+      # Determine whether input must be figured on the ascending or
+      # descending scale intervals; descending intervals only if there
+      # is a previous pitch and if the delta from that previous pitch
+      # shows descending motion, otherwise ascending. The scales are
+      # [[asc],[dsc]] AoA.
       my $input_motion = $ASC;
       $input_motion = $DSC if defined $prev_in and $pitch - $prev_in < 0;
       my $output_motion = $self->get_contrary ? !$input_motion : $input_motion;
@@ -421,8 +424,8 @@ sub reset_modal_pitches {
   $_[0]->clear_modal_out;
 }
 
-# mostly for compatibility with how older versions of this module worked,
-# and handy to do these in a single call.
+# Mostly for compatibility with how older versions of this module
+# worked, and handy to do these in a single call.
 sub set_modal_pitches {
   my ( $self, $input_pitch, $output_pitch ) = @_;
 
@@ -431,9 +434,9 @@ sub set_modal_pitches {
     $pitch = $self->pitchnum($input_pitch)
       // die "pitchnum failed to parse $input_pitch\n";
     $self->modal_in($pitch);
-    # auto-reset output if something prior there so not carrying along
-    # something from a previous conversion, as the default is to use the same
-    # pitch for the output tonic as from the input.
+    # Auto-reset output if something prior there so not carrying along
+    # something from a previous conversion, as the default is to use the
+    # same pitch for the output tonic as from the input.
     if ( !defined $output_pitch and $self->has_modal_out ) {
       $self->clear_modal_out;
     }
@@ -631,29 +634,31 @@ settings, or perhaps by adding a free counterpoint voice to support the
 canon voices. Analyzing the results with L<Music::Tension> may help
 locate suitable material.
 
-The methods of this module at present suit the crab canon, as those lines are
-relatively easy to calculate. Other forms of canon would ideally require a
-counterpoint module, which has not yet been written. The B<modal_map> method
-also assists with the calculation of new voices of a fugue, for example
-converting the subject to the dominant.
+The methods of this module at present suit the crab canon, as those
+lines are relatively easy to calculate. Other forms of canon would
+ideally require a counterpoint module, which has not yet been written.
+The B<modal_map> method also assists with the calculation of new voices
+of a fugue, for example converting the subject to the dominant.
 
-Several routines take human-readable note names (B<set_transpose>, B<modal_in>,
-B<modal_out>, B<set_modal_pitches>) as provided by L<Music::PitchNum>. However,
-most other methods in this module expect raw pitch numbers.
+Several routines take human-readable note names (B<set_transpose>,
+B<modal_in>, B<modal_out>, B<set_modal_pitches>) as provided by
+L<Music::PitchNum>. However, most other methods in this module expect
+raw pitch numbers.
 
 =head1 CONSTRUCTOR
 
-The B<new> method accepts any of the L</"ATTRIBUTES"> as well as optionally a
-B<pitchstyle> parameter to set where the B<pitchnum> method (to convert note
-names to note numbers, e.g. for transposition) comes from:
+The B<new> method accepts any of the L</"ATTRIBUTES"> as well as
+optionally a B<pitchstyle> parameter to set where the B<pitchnum>
+method (to convert note names to note numbers, e.g. for transposition)
+comes from:
 
   my $mc = Music::Canon->new(
     pitchstyle => 'Music::PitchNum::German',
   );
 
-The default for B<pitchstyle> is L<Music::PitchNum>, which supports a variety
-of note name formats. Note names are used by some but not all of the attributes
-of this module.
+The default for B<pitchstyle> is L<Music::PitchNum>, which supports a
+variety of note name formats. Note names are used by some but not all of
+the attributes of this module.
 
 =head1 ATTRIBUTES
 
@@ -661,14 +666,15 @@ of this module.
 
 =item B<atonal>(I<Music::AtonalUtil object>)
 
-Gets or sets the custom L<Music::AtonalUtil> object used internally by this
-module for various purposes. By default, this is a L<Music::AtonalUtil> object.
+Gets or sets the custom L<Music::AtonalUtil> object used internally by
+this module for various purposes. By default, this is a
+L<Music::AtonalUtil> object.
 
 =item B<contrary> (B<get_contrary>, B<set_contrary>(I<truthiness>))
 
-Gets or sets the B<contrary> setting, that is, whether or not the resulting
-canonic line moves in the same or opposite direction as the original phrase.
-Enabled by default.
+Gets or sets the B<contrary> setting, that is, whether or not the
+resulting canonic line moves in the same or opposite direction as the
+original phrase. Enabled by default.
 
 =item B<DEG_IN_SCALE>
 
@@ -677,80 +683,83 @@ changed, as changing it is probably untested.
 
 =item B<modal_chrome> (B<get_modal_chrome>, B<set_modal_chrome>(I<troolean>))
 
-Method by which to handle chromatics under B<modal_map>, most notably when
-there are relatively few notes in the scale, so many non-scale notes a
-chromatic could be. The default, C<0>, tries to place the chromatic evenly
-between the two given notes; C<-1> flattens the input pitch under
-consideration, and C<1> sharpens the input pitch.
+Method by which to handle chromatics under B<modal_map>, most notably
+when there are relatively few notes in the scale, so many non-scale
+notes a chromatic could be. The default, C<0>, tries to place the
+chromatic evenly between the two given notes; C<-1> flattens the input
+pitch under consideration, and C<1> sharpens the input pitch.
 
 =item B<modal_hook>
 
-Gets or sets the code reference that handles pitches that are impossible to
-convert into the output scale. By default, this is a code reference that
-returns C<undef>, though could be adjusted to return, say, C<s> for lilypond
-"silents":
+Gets or sets the code reference that handles pitches that are impossible
+to convert into the output scale. By default, this is a code reference
+that returns C<undef>, though could be adjusted to return, say, C<s> for
+lilypond "silents":
 
   $mc->modal_hook( sub { 's' } );
 
-With a custom hook, the writer of that subroutine must perform the full pitch
-calculation, if necessary, and whatever the routine returns will be used as the
-new pitch in the output phrase. Consult the source to see what arguments the
-hook is passed to produce a suitable pitch number instead of a string value.
+With a custom hook, the writer of that subroutine must perform the full
+pitch calculation, if necessary, and whatever the routine returns will
+be used as the new pitch in the output phrase. Consult the source to see
+what arguments the hook is passed to produce a suitable pitch number
+instead of a string value.
 
 =item B<modal_in> (B<clear_modal_in>, B<has_modal_in>)
 
-Optional input tonic for B<modal_map>; if unset (which is the default) then
-B<modal_map> will use the first note of the phrase as the tonic, which will not
-suit phrases that do not begin on the tonic of the scale. This value may either
-be a pitch number, or a note name in absolute format, e.g. C<c> for 48, or
-C<C4> for 60, etc. See L<Music::PitchNum> for details.
+Optional input tonic for B<modal_map>; if unset (which is the default)
+then B<modal_map> will use the first note of the phrase as the tonic,
+which will not suit phrases that do not begin on the tonic of the scale.
+This value may either be a pitch number, or a note name in absolute
+format, e.g. C<c> for 48, or C<C4> for 60, etc. See L<Music::PitchNum>
+for details.
 
 =item B<modal_out> (B<clear_modal_out>, B<has_modal_out>)
 
-Optional output tonic for B<modal_map>, unset by default. Necessary as for
-B<modal_in> if the output phrase will not begin on the tonic. This value may
-either be a pitch number, or a note name in absolute format, e.g. C<c> for 48,
-or C<C4> for 60, etc. See L<Music::PitchNum> for details.
+Optional output tonic for B<modal_map>, unset by default. Necessary
+as for B<modal_in> if the output phrase will not begin on the tonic.
+This value may either be a pitch number, or a note name in absolute
+format, e.g. C<c> for 48, or C<C4> for 60, etc. See
+L<Music::PitchNum> for details.
 
 =item B<modal_scale_in> (B<clear_modal_scale_in>, B<has_modal_scale_in>)
 
-Input scale for B<modal_map>, the Major scale by default. Should be changed
-ideally by the B<set_modal_scale_in> method, which runs the input through the
-B<scales2intervals> method.
+Input scale for B<modal_map>, the Major scale by default. Should be
+changed ideally by the B<set_modal_scale_in> method, which runs the
+input through the B<scales2intervals> method.
 
 =item B<modal_scale_out> (B<clear_modal_scale_out>, B<has_modal_scale_out>)
 
-Output scale for B<modal_map>, the Major scale by default. Should be changed
-ideally by the B<set_modal_scale_out> method, which runs the input through the
-B<scales2intervals> method.
+Output scale for B<modal_map>, the Major scale by default. Should be
+changed ideally by the B<set_modal_scale_out> method, which runs the
+input through the B<scales2intervals> method.
 
 =item B<non_octave_scales>
 
-Boolean, disabled by default, that if enabled will allow for B<modal_map>
-scales that do not sum up to the B<DEG_IN_SCALE> value. By default, scales are
-modified to sum up to B<DEG_IN_SCALE> (due to L<Music::Scales> omitting the
-C<VII> to C<I> interval) or to throw an error if the intervals exceed
-B<DEG_IN_SCALE>.
+Boolean, disabled by default, that if enabled will allow for
+B<modal_map> scales that do not sum up to the B<DEG_IN_SCALE> value. By
+default, scales are modified to sum up to B<DEG_IN_SCALE> (due to
+L<Music::Scales> omitting the C<VII> to C<I> interval) or to throw an
+error if the intervals exceed B<DEG_IN_SCALE>.
 
 =item B<retrograde> (B<get_retrograde>, B<set_retrograde>(I<truthiness>))
 
-Gets or sets the B<retrograde> setting. This is enabled by default, and will
-reverse the order of notes in the output phrase.
+Gets or sets the B<retrograde> setting. This is enabled by default, and
+will reverse the order of notes in the output phrase.
 
 =item B<transpose> (B<get_transpose>, B<set_transpose>(I<note-or-number>))
 
 Gets or sets the B<transpose> value, C<0> by default, used by both the
-B<exact_map> and B<modal_map> methods to offset the output phrase by. The value
-can either be an integer, in which case the transposition will be by that
-number of semitones, or a note name, in which case the transposition will be
-made from the starting pitch number of the phrase to the pitch number of that
-note name. Note names use absolute notation, so something like C<c> is actually
-C<C3> or MIDI number C<48>.
+B<exact_map> and B<modal_map> methods to offset the output phrase by.
+The value can either be an integer, in which case the transposition will
+be by that number of semitones, or a note name, in which case the
+transposition will be made from the starting pitch number of the phrase
+to the pitch number of that note name. Note names use absolute notation,
+so something like C<c> is actually C<C3> or MIDI number C<48>.
 
-The transposition is calculated from the tonic of the input phrase; that is, in
-Bflat Major, the tonic of C<bes> (C<70>) plus a transposition of C<2> would be
-from C<bes> to C<c>, regardless of what degree of the scale the phrase begins
-on (unless it begins on the tonic).
+The transposition is calculated from the tonic of the input phrase; that
+is, in Bflat Major, the tonic of C<bes> (C<70>) plus a transposition of
+C<2> would be from C<bes> to C<c>, regardless of what degree of the
+scale the phrase begins on (unless it begins on the tonic).
 
 =back
 
@@ -760,10 +769,10 @@ on (unless it begins on the tonic).
 
 =item B<exact_map> I<phrase of notes or whatnot as list or array ref>
 
-One-to-one semitone mapping from the input I<phrase> to the returned list.
-I<phrase> may be a list or an array reference, and may contain raw pitch
-numbers (integers), objects that support a B<pitch> method, or other data that
-will be passed through unchanged.
+One-to-one semitone mapping from the input I<phrase> to the returned
+list. I<phrase> may be a list or an array reference, and may contain raw
+pitch numbers (integers), objects that support a B<pitch> method, or
+other data that will be passed through unchanged.
 
 This method is affected by various attributes, notably B<set_contrary>,
 B<set_retrograde>, and B<set_transpose>.
@@ -772,35 +781,41 @@ B<set_retrograde>, and B<set_transpose>.
 
 Returns the current modal input and output starting pitches used by
 B<modal_map>. These will be undefined if unset. Mostly present for
-compatibility with older versions of this module; the values it returns may
-also be accessed via the B<modal_in> and B<modal_out> attributes.
+compatibility with older versions of this module; the values it returns
+may also be accessed via the B<modal_in> and B<modal_out> attributes.
 
 =item B<get_modal_scale_in>
 
-Returns a list of two array references from the B<modal_scale_in> attribute
-that are the ascending and descending scale intervals used by B<modal_map> for
-the input phrase. The Major scale is set by default.
+Returns a list of two array references from the B<modal_scale_in>
+attribute that are the ascending and descending scale intervals used by
+B<modal_map> for the input phrase. The Major scale is set by default.
 
 =item B<get_modal_scale_out>
 
-Returns a list of two array references from the B<modal_scale_out> attribute
-that are the ascending and descending scale intervals used by B<modal_map> for
-the output phrase. The Major scale is set by default.
+Returns a list of two array references from the B<modal_scale_out>
+attribute that are the ascending and descending scale intervals used by
+B<modal_map> for the output phrase. The Major scale is set by default.
 
 =item B<modal_map> I<phrase of notes or whatnot as list or array ref>
 
-Modal mapping of the pitches in I<phrase> from an arbitrary input mode to an
-arbitrary output mode, using the Major scale by default. Returns a list that is
-the new phrase, though bear in mind that elements that cannot be converted will
-be replaced with C<undef> by default. I<phrase> may be a list or an array
-reference, and may contain raw pitch numbers (integers), objects that support a
-B<pitch> method, or other data that will be passed through unchanged.
+Modal mapping of the pitches in I<phrase> from an arbitrary input mode
+to an arbitrary output mode, using the Major scale by default. Returns a
+list that is the new phrase, though bear in mind that elements that
+cannot be converted will be replaced with C<undef> by default. I<phrase>
+may be a list or an array reference, and may contain raw pitch numbers
+(integers), objects that support a B<pitch> method, or other data that
+will be passed through unchanged.
 
-Setting the starting pitches via B<modal_in> and B<modal_out> is a necessity if
-the I<phrase> starts on a scale degree that is not the root or tonic of the
-mode involved. That is, a I<phrase> that begins on the note E4 (MIDI 64) will
-create a mapping around E-major by default; if a mapping around C-Major (at
-MIDI pitch 60) is intended, this must be set in advance:
+B<modal_map> will die if a transposition to a chromatic note is
+attempted. Use an C<eval> block or otherwise catch the exception if this
+is a problem.
+
+Setting the starting pitches via B<modal_in> and B<modal_out> is a
+necessity if the I<phrase> starts on a scale degree that is not the root
+or tonic of the mode involved. That is, a I<phrase> that begins on the
+note E4 (MIDI 64) will create a mapping around E-major by default; if a
+mapping around C-Major (at MIDI pitch 60) is intended, this must be set
+in advance:
 
   # equivalent means
   $mc->modal_in(60); $mc->modal_out(60);
@@ -809,41 +824,42 @@ MIDI pitch 60) is intended, this must be set in advance:
 
   $mc->modal_map(qw/64 .../);
 
-Note that B<modal_map> is somewhat experimental, so likely has edge cases or
-bugs unknown to me, or may change without notice as I puzzle through the
-mapping logic. Consult the tests under the module distribution C<t/> directory
-for what cases are covered. It is also relatively unexplored, for example
-mapping between exotic scales or Forte Numbers.
+Note that B<modal_map> is somewhat complicated, so likely has edge cases
+and bugs. Consult the tests under the module distribution C<t/>
+directory for what cases are covered. It is also relatively unexplored,
+for example mapping between exotic scales or Forte Numbers.
 
-The algorithm calculates the scale steps (plus any chromatic offset) from the
-input tonic to the notes of the phrase, then replicates those steps (and
-chromatic offsets, if possible) in the output mode. The initial starting
-pitches (derived from the input phrase or the pitches set via the
-B<set_modal_pitches> method, along with the the B<transpose> attribute) form
-the point of linkage between the two scales (or really any arbitrary set of
-intervals).
+The algorithm calculates the scale steps (plus any chromatic offset)
+from the input tonic to the notes of the phrase, then replicates those
+steps (and chromatic offsets, if possible) in the output mode. The
+initial starting pitches (derived from the input phrase or the pitches
+set via the B<set_modal_pitches> method, along with the the B<transpose>
+attribute) form the point of linkage between the two scales (or really
+any arbitrary set of intervals).
 
 An example may help illustrate the operation. Assuming Major to Major
-conversion, contrary motion, and a transposition by an octave (12 semitones),
-the algorithm will convert pitches as shown in the chart below. The "linking
-point" is from 0 in the input scale to 12 in the output scale.
+conversion, contrary motion, and a transposition by an octave (12
+semitones), the algorithm will convert pitches as shown in the chart
+below. The "linking point" is from 0 in the input scale to 12 in the
+output scale.
 
         0    1    2   3    4   5   6    7   8    9   10  11  12
   In  | C  | c# | D | d# | E | F | f# | G | g# | A | a# | B | C' |
   Out | C' | x  | B | a# | A | G | f# | F | x  | E | d# | D | C  |
        12        11   10   9   7   6    5        4   3    2   0
 
-Assuming an input phrase of C<C G c#>, the output phrase would be C<C' F undef>
-by default, as there is no way to convert C<c#> using these map and
-transposition settings. Other settings will have between zero to several notes
-that cannot be converted. The C<eg/conversion-charts> file of this module's
-distribution contains more such charts, as also can be generated by the
-C<eg/brutecanon> utility.
+Assuming an input phrase of C<C G c#>, the output phrase would be C<C' F
+undef> by default, as there is no way to convert C<c#> using these map
+and transposition settings. Other settings will have between zero to
+several notes that cannot be converted. The C<eg/conversion-charts> file
+of this module's distribution contains more such charts, as also can be
+generated by the C<eg/brutecanon> utility.
 
-How to map non-scale notes is another concern; the above chart shows two C<x>
-for notes that cannot be converted. Depending on the mapping, there might be
-zero, one, or several possible choices for a given chromatic. Consider C<c#> of
-C Major to various entry points of the sakura scale C<G# A# B D# E>:
+How to map non-scale notes is another concern; the above chart shows two
+C<x> for notes that cannot be converted. Depending on the mapping, there
+might be zero, one, or several possible choices for a given chromatic.
+Consider C<c#> of C Major to various entry points of the sakura scale
+C<G# A# B D# E>:
 
     C Major    | C  | c# | D  | 
   ------------------------------------------------------------
@@ -851,23 +867,25 @@ C Major to various entry points of the sakura scale C<G# A# B D# E>:
   Sakura @ A#  | A# | x  | B  |  - throw exception
   Sakura @ B   | B  | ?  | D# |  - (c, c#, d)
 
-The I<modal_chrome> attribute controls the multiple choice situation. The
-default setting of C<0> results in C<c#>, as that value is halfway between C<B>
-and C<D>, just as the input scale chromatic is halfway between C<C> and C<D>.
-Otherwise, with a negative I<modal_chrome>, C<c> is favored, or for a positive
-I<modal_chrome>, C<d>. Test cases are advised to confirm that the resulting
-chromatics are appropriate, though this should only be necessary if the output
-scale has intervals greater than two--hungarian minor, any of the pentatonic
-scales, and so forth.
+The I<modal_chrome> attribute controls the multiple choice situation.
+The default setting of C<0> results in C<c#>, as that value is halfway
+between C<B> and C<D>, just as the input scale chromatic is halfway
+between C<C> and C<D>. Otherwise, with a negative I<modal_chrome>, C<c>
+is favored, or for a positive I<modal_chrome>, C<d>. Test cases are
+advised to confirm that the resulting chromatics are appropriate, though
+this should only be necessary if the output scale has intervals greater
+than two--hungarian minor, any of the pentatonic scales, and so forth.
 
-B<modal_map> is affected by various attributes including B<set_contrary>,
-B<set_modal_pitches> (or B<modal_in> or B<modal_out>), B<set_retrograde>,
-B<set_modal_scale_in>, B<set_modal_scale_out>, and B<set_transpose>.
+B<modal_map> is affected by various attributes including
+B<set_contrary>, B<set_modal_pitches> (or B<modal_in> or B<modal_out>),
+B<set_retrograde>, B<set_modal_scale_in>, B<set_modal_scale_out>, and
+B<set_transpose>.
 
 A call to B<reset_modal_pitches> may be necessary to clear any custom
-B<modal_in> or B<modal_out> pitches, if different tonics for different phrases
-are being run through B<modal_map> in a single process. Or, instead, always set
-the desired tonics with a B<set_modal_pitches> before calling B<modal_map>.
+B<modal_in> or B<modal_out> pitches, if different tonics for different
+phrases are being run through B<modal_map> in a single process. Or,
+instead, always set the desired tonics with a B<set_modal_pitches>
+before calling B<modal_map>.
 
 =item B<reset_modal_pitches>
 
@@ -877,60 +895,101 @@ These values otherwise persist across calls to B<modal_map>.
 
 =item B<set_modal_pitches> I<input_tonic>, [ I<output_tonic> ]
 
-Sets the tonic note or pitch of the input and output interval sets used by
-B<modal_map>. Really just updates the B<modal_in> or B<modal_out> attributes in
-a single call. If the I<input_tonic> is C<undef>, then only the I<output_tonic>
-will be changed, assuming that is set.
+Sets the tonic note or pitch of the input and output interval sets used
+by B<modal_map>. Really just updates the B<modal_in> or B<modal_out>
+attributes in a single call. If the I<input_tonic> is C<undef>, then
+only the I<output_tonic> will be changed, assuming that is set.
 
-Setting these values is a necessity if the I<phrase> given to B<modal_map>
-begins on a non-tonic scale degree, as otherwise that non-tonic scale degree
-will become the tonic for whatever interval set is involved. That is, if the
-notes C<64 64 65 67 67> are passed to B<modal_map>, by default B<modal_map>
-will assume C<E> Major (MIDI note 64) as the input scale, and C<E> Major as
-the output scale (though that may vary depending on the B<transpose>
-attribute as well).
+Setting these values is a necessity if the I<phrase> given to
+B<modal_map> begins on a non-tonic scale degree, as otherwise that non-
+tonic scale degree will become the tonic for whatever interval set is
+involved. That is, if the notes C<64 64 65 67 67> are passed to
+B<modal_map>, by default B<modal_map> will assume C<E> Major (MIDI note
+64) as the input scale, and C<E> Major as the output scale (though that
+may vary depending on the B<transpose> attribute as well).
 
-The values may either be a pitch number, or a note name in absolute format,
-e.g. C<c> for 48, or C<C4> for 60, etc. See L<Music::PitchNum> for details.
+The values may either be a pitch number, or a note name in absolute
+format, e.g. C<c> for 48, or C<C4> for 60, etc. See L<Music::PitchNum>
+for details.
 
 =item B<set_modal_scale_in>(I<asc>, [I<dsc>])
 
-Sets the scale intervals for the input scale used by B<modal_map>. The I<asc>
-or optional I<dsc> arguments can be one of several different things:
+Sets the scale intervals for the input scale used by B<modal_map>.
+The I<asc> or optional I<dsc> arguments can be one of several
+different things:
 
   $mc->set_modal_scale_in('minor');  # Music::Scales
   $mc->set_modal_scale_in('7-23');   # Forte Number
   # arbitrary interval sequence
   $mc->set_modal_scale_in([qw/2 1 3 2 1 3 1/]);
 
-If the I<dsc> is undefined, the corresponding I<asc> intervals will be used,
-except for anything that calls L<Music::Scales>, for which the descending
-intervals associated with the ascending scale will be used. If I<asc> is
-undefined, I<dsc> must then be set to something. This allows the descending
-intervals alone to be adjusted.
+If the I<dsc> is undefined, the corresponding I<asc> intervals will be
+used, except for anything that calls L<Music::Scales>, for which the
+descending intervals associated with the ascending scale will be used.
+If I<asc> is undefined, I<dsc> must then be set to something. This
+allows the descending intervals alone to be adjusted.
 
   $mc->set_modal_scale_in(undef, 'aeolian');
 
 =item B<set_modal_scale_out>(I<asc>, [I<dsc>])
 
-As for B<set_modal_scale_in> only for the output scale used by B<modal_map>.
+As for B<set_modal_scale_in> only for the output scale used by
+B<modal_map>.
 
 =item B<scales2intervals>(I<asc>, [I<dsc>])
 
-Scale-to-interval conversion utility method, mostly to let the internal
-wrappers around the attributes B<modal_scale_in> and B<modal_scale_out> to
-accept Forte Numbers or LMusic::Scales> scales or raw interval sets.
+Scale-to-interval utility method, mostly for the attributes
+B<modal_scale_in> and B<modal_scale_out> to accept Forte Numbers (a
+string such as C<7-23>) or L<Music::Scales> scales or a raw interval set
+(an array reference of intervals).
 
 =item B<steps> I<pitch_from>, I<pitch_to>, I<scale_intervals>
 
-A mostly internal routine used in particular by B<modal_map> that given a
-starting pitch and a destination pitch, along with the intervals for a scale
-(such as returned by the B<modal_scale_*> attributes), returns the number of
-scale steps between the two pitches, any possible chromatic offset (in
-semitones, 0 by default), the direction of the motion, and the last interval
-from the scale (this detail is handy for chromatic conversions).
+A mostly internal routine used in particular by B<modal_map> that given
+a starting pitch and a destination pitch, along with the intervals for a
+scale (such as returned by the B<modal_scale_*> attributes), returns the
+number of scale steps between the two pitches, any possible chromatic
+offset (in semitones, 0 by default), the direction of the motion, and
+the last interval from the scale (this detail is handy for chromatic
+conversions).
 
 =back
+
+=head1 MELODIC INVERSION
+
+John W. Verrall in "Fugue and Invention in Theory and Practice"
+discusses various inversions, detailed for reference here. The most
+effective notes (pitch degrees) for tonal melodic inversions are:
+
+            c d e f g a b c'
+  Original  1 2 3 4 5 6 7 8
+  Inversion 5 4 3 2 1 7 6 5
+            g f e d c b a g
+
+Symmetric inversions (for perhaps B<exact_map>) vary by the key;
+for major:
+
+  Original  1 2 3 4 5 6 7 8
+  Inversion 3 2 1 7 6 5 4 3
+
+With only a subset of the major scale, another possible mapping is:
+
+  Original  1 2 3 4 5 6
+  Inversion 6 5 4 3 2 1
+
+Chromatics raised in the original should be lowered in the inversion,
+etc. In minor mode, a potential mapping might be:
+
+  Original  5 6 7 1 2 3 4 5
+  Inversion 5 4 3 2 1 7 6 5
+
+These were taken from chapter 9 of the aforementioned book (p. 85-7).
+Implementation is another matter, as there is no way for B<modal_map> to
+perform the first of these mappings (unless I missed something in the
+attempted brute-force fit). The easiest solution with the present
+software would likely be to have two C<Music::Canon> objects, and pass
+pitches to one or the other depending on whether the pitch is in the c-g
+range, and to the other for g-b.
 
 =head1 BUGS
 
@@ -946,10 +1005,17 @@ L<https://github.com/thrig/Music-Canon>
 
 =head2 Known Issues
 
-B<modal_map> is still being developed, and likely has problems, notably
-transpositions to chromatic or even impossible scale degrees.
+B<modal_map> cannot transpose to a chromatic pitch (it will C<die> if
+such is attempted). This method is otherwise complex, so may have other
+unknown bugs.
+
+Actual composition often requires arbitrary adjustment of canonic or
+other imitative forms, usually to make the harmony more convincing. Such
+adjustments are outside the scope of this module.
 
 =head1 SEE ALSO
+
+"Fugue and Invention in Theory and Practice" by John W. Verrall
 
 "The Technique of Canon" by Hugo Norden
 
@@ -962,10 +1028,9 @@ thrig - Jeremy Mates (cpan:JMATES) C<< <jmates at cpan.org> >>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2013,2014 by Jeremy Mates
+Copyright (C) 2013-2015 by Jeremy Mates
 
-This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself, either Perl version 5.16 or, at
-your option, any later version of Perl 5 you may have available.
+This module is free software; you can redistribute it and/or modify it
+under the Artistic License (2.0).
 
 =cut

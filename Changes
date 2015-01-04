@@ -1,5 +1,9 @@
 See the git repository. Otherwise, of note:
 
+ * 2.02 ruminations on melodic inversions as seen in actual composition,
+   boilerplate foo, license perl -> artistic 2, remove fatal warnings
+   from tests.
+
  * 2.00 boy howdy breaking interface changes in transition to Moo, stateless
    design (and therefore fewer troublesome reset_* methods), a modal_hook to
    handle modal_map exceptions, and modal_map improvements as transposition was
