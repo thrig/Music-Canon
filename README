@@ -4,9 +4,10 @@ To install this module, use CPAN, for example:
 
   cpan Music::Canon
 
+
 For the source code, see:
 
-http://github.com/thrig/Music-Canon
+https://github.com/thrig/Music-Canon
 
 This can be built and installed by running:
 
@@ -15,13 +16,16 @@ This can be built and installed by running:
   make test
   make install
 
+
 Run perldoc(1) on Music::Canon for more documentation.
+
 
 DEPENDENCIES
 
 Some knowledge of music theory will benefit the user. In particular, "The
 Technique of Canon" by Hugo Norden, if available, is an excellent resource on
 writing canons.
+
 
 COPYRIGHT AND LICENCE
 

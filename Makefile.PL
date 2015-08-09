@@ -28,7 +28,6 @@ my %params = (
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {
     'Test::More'      => 0,
-    'lib'             => 0,
     'strict'          => 0,
   },
   PREREQ_PM => {
@@ -46,8 +45,8 @@ my %params = (
     'meta-spec' => { version => 2 },
     'resources' => {
       repository => {
-        url  => 'git://github.com/thrig/Music-PitchNum.git',
-        web  => 'https://github.com/thrig/Music-PitchNum',
+        url  => 'git://github.com/thrig/Music-Canon.git',
+        web  => 'https://github.com/thrig/Music-Canon',
         type => 'git',
       },
     },
@@ -60,7 +59,7 @@ my %params = (
 ) =~ tr/_//d;
 
 if ( $mm_version < 6.67_04 ) {
-  # Why? For the glory of satan, of course!
+  # Why? For the glory of salieri, of course!
   *ExtUtils::MM_Any::_add_requirements_to_meta_v1_4 =
     \&ExtUtils::MM_Any::_add_requirements_to_meta_v2;
 }
