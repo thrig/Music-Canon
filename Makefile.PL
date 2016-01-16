@@ -27,7 +27,7 @@ my %params = (
   },
   BUILD_REQUIRES => {},
   TEST_REQUIRES  => {
-    'Test::More'      => 0,
+    'Test::Most'      => 0,
     'strict'          => 0,
   },
   PREREQ_PM => {

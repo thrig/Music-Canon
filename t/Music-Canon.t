@@ -4,22 +4,17 @@
 # short term... but then you rewrite the module to use Moo and
 # hey hey tests are great!
 
-use strict;
-use warnings;
+use Test::Most;    # plan is down at bottom
 
-use Test::More;    # plan is down at bottom
-
-eval 'use Test::Differences';    # display convenience
-my $deeply = $@ ? \&is_deeply : \&eq_or_diff;
+my $deeply = \&eq_or_diff;
 
 ########################################################################
 #
 # Defaults and Initial Mode Setup
 
-BEGIN { use_ok('Music::Canon') }
+use Music::Canon;
 
 my $mc = Music::Canon->new;
-isa_ok( $mc, 'Music::Canon' );
 
 # defaults
 is( $mc->get_transpose,  0, 'default transpose' );
@@ -140,4 +135,4 @@ $deeply->(
   'exact run down'
 );
 
-plan tests => 23;
+plan tests => 21;

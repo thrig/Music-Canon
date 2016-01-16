@@ -3,15 +3,11 @@
 # modal_map proved tricky enough to need a bad sequel (or was never really
 # fully thought through wrt transpose).
 
-use strict;
-use warnings;
+use Test::Most;    # plan is down at bottom
 
-use Test::More;    # plan is down at bottom
+my $deeply = \&eq_or_diff;
 
-eval 'use Test::Differences';    # display convenience
-my $deeply = $@ ? \&is_deeply : \&eq_or_diff;
-
-BEGIN { use_ok('Music::Canon') }
+use Music::Canon;
 my $mc = Music::Canon->new;
 
 # some more scale tests + transpose
@@ -59,4 +55,4 @@ $deeply->(
 # TODO need to work out handling of transpose to chromatic or unpossible scale
 # degrees.
 
-plan tests => 5;
+plan tests => 4;

@@ -2,19 +2,15 @@
 #
 # modal_map proved tricky enough to need an isolated test file
 
-use strict;
-use warnings;
+use Test::Most;    # plan is down at bottom
 
-use Test::More;    # plan is down at bottom
-
-eval 'use Test::Differences';    # display convenience
-my $deeply = $@ ? \&is_deeply : \&eq_or_diff;
+my $deeply = \&eq_or_diff;
 
 # for modal_map tests, see perldocs for chart showing where these occur
 my @major_to_major_undefined = qw/-11 -4 1 8 13 20/;
 my @mm_to_mm_undefined       = qw/-15 -11 -3 4 10 16/;
 
-BEGIN { use_ok('Music::Canon') }
+use Music::Canon;
 my $mc = Music::Canon->new;
 
 ########################################################################
@@ -252,4 +248,4 @@ middle();
 
 ########################################################################
 
-plan tests => 35 + @major_to_major_undefined + @mm_to_mm_undefined;
+plan tests => 34 + @major_to_major_undefined + @mm_to_mm_undefined;

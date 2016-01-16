@@ -18,7 +18,7 @@ use Music::Scales qw/get_scale_nums is_scale/;
 use namespace::clean;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '2.03';
+our $VERSION = '2.04';
 
 # Array indices for ascending versus descending scales (as some minor
 # scales are different, depending)
@@ -615,8 +615,8 @@ Music::Canon - routines for musical canon construction
   @new_phrase = $mc->modal_map(qw/64 64 65 67 67 .../);
 
 See also C<canonical> of the L<App::MusicTools> module for a command
-line tool interface to this code, and the C<eg/> and C<t/> directories
-of this distribution for more example code.
+line tool interface to this module, and the C<eg/> and C<t/> directories
+of this distribution for additional example code.
 
 =head1 DESCRIPTION
 
@@ -642,8 +642,13 @@ of a fugue, for example converting the subject to the dominant.
 
 Several routines take human-readable note names (B<set_transpose>,
 B<modal_in>, B<modal_out>, B<set_modal_pitches>) as provided by
-L<Music::PitchNum>. However, most other methods in this module expect
-raw pitch numbers.
+L<Music::PitchNum>. Most methods in this module otherwise expect raw
+pitch numbers (integers).
+
+Output from the C<*_map> functions for a fixed set of parameters and
+input pitches is extremely suitable to memoization. The conversion of a
+range of input pitches could be built into a hash table, or assuming non-
+negative pitch numbers, an array.
 
 =head1 CONSTRUCTOR
 
@@ -684,10 +689,13 @@ changed, as changing it is probably untested.
 =item B<modal_chrome> (B<get_modal_chrome>, B<set_modal_chrome>(I<troolean>))
 
 Method by which to handle chromatics under B<modal_map>, most notably
-when there are relatively few notes in the scale, so many non-scale
-notes a chromatic could be. The default, C<0>, tries to place the
+when there are relatively few notes in the scale, so many possible non-
+scale notes a chromatic could be. The default, C<0>, tries to place the
 chromatic evenly between the two given notes; C<-1> flattens the input
 pitch under consideration, and C<1> sharpens the input pitch.
+
+This method is explained in more detail under the B<modal_map> method
+documentation, below.
 
 =item B<modal_hook>
 
@@ -704,16 +712,19 @@ be used as the new pitch in the output phrase. Consult the source to see
 what arguments the hook is passed to produce a suitable pitch number
 instead of a string value.
 
-=item B<modal_in> (B<clear_modal_in>, B<has_modal_in>)
+=item B<modal_in> I<pitch> - (B<clear_modal_in>, B<has_modal_in>)
 
 Optional input tonic for B<modal_map>; if unset (which is the default)
-then B<modal_map> will use the first note of the phrase as the tonic,
-which will not suit phrases that do not begin on the tonic of the scale.
-This value may either be a pitch number, or a note name in absolute
+then B<modal_map> will use the first note of the phrase as the tonic.
+This will not suit phrases that do not begin on the tonic of the scale.
+The value may either be a pitch number, or a note name in absolute
 format, e.g. C<c> for 48, or C<C4> for 60, etc. See L<Music::PitchNum>
 for details.
 
-=item B<modal_out> (B<clear_modal_out>, B<has_modal_out>)
+The B<clear_modal_in> and B<has_modal_in> methods can be used to clear
+or check whether this attribute is set.
+
+=item B<modal_out> I<pitch> - (B<clear_modal_out>, B<has_modal_out>)
 
 Optional output tonic for B<modal_map>, unset by default. Necessary
 as for B<modal_in> if the output phrase will not begin on the tonic.
@@ -735,16 +746,17 @@ input through the B<scales2intervals> method.
 
 =item B<non_octave_scales>
 
-Boolean, disabled by default, that if enabled will allow for
-B<modal_map> scales that do not sum up to the B<DEG_IN_SCALE> value. By
-default, scales are modified to sum up to B<DEG_IN_SCALE> (due to
-L<Music::Scales> omitting the C<VII> to C<I> interval) or to throw an
-error if the intervals exceed B<DEG_IN_SCALE>.
+Boolean, disabled by default. If enabled will allow for B<modal_map>
+scales that do not sum up to the B<DEG_IN_SCALE> value (12). By default,
+scales are implicitly modified to sum up to B<DEG_IN_SCALE> (due to
+L<Music::Scales> omitting the C<VII> to C<I> interval) or an error is
+thrown if the interval sum exceeds B<DEG_IN_SCALE>.
 
 =item B<retrograde> (B<get_retrograde>, B<set_retrograde>(I<truthiness>))
 
-Gets or sets the B<retrograde> setting. This is enabled by default, and
-will reverse the order of notes in the output phrase.
+Boolean. Gets or sets the B<retrograde> setting. This is enabled by
+default, and is a fancy way of saying that the order of the input notes
+will be reversed.
 
 =item B<transpose> (B<get_transpose>, B<set_transpose>(I<note-or-number>))
 
@@ -759,7 +771,7 @@ so something like C<c> is actually C<C3> or MIDI number C<48>.
 The transposition is calculated from the tonic of the input phrase; that
 is, in Bflat Major, the tonic of C<bes> (C<70>) plus a transposition of
 C<2> would be from C<bes> to C<c>, regardless of what degree of the
-scale the phrase begins on (unless it begins on the tonic).
+scale the phrase begins on.
 
 =back
 
@@ -774,8 +786,8 @@ list. I<phrase> may be a list or an array reference, and may contain raw
 pitch numbers (integers), objects that support a B<pitch> method, or
 other data that will be passed through unchanged.
 
-This method is affected by various attributes, notably B<set_contrary>,
-B<set_retrograde>, and B<set_transpose>.
+This method is affected by various L</"ATTRIBUTES">, notably
+B<set_contrary>, B<set_retrograde>, and B<set_transpose>.
 
 =item B<get_modal_pitches>
 
@@ -788,13 +800,13 @@ may also be accessed via the B<modal_in> and B<modal_out> attributes.
 
 Returns a list of two array references from the B<modal_scale_in>
 attribute that are the ascending and descending scale intervals used by
-B<modal_map> for the input phrase. The Major scale is set by default.
+B<modal_map> for the input phrase. The Major scale is used by default.
 
 =item B<get_modal_scale_out>
 
 Returns a list of two array references from the B<modal_scale_out>
 attribute that are the ascending and descending scale intervals used by
-B<modal_map> for the output phrase. The Major scale is set by default.
+B<modal_map> for the output phrase. The Major scale is used by default.
 
 =item B<modal_map> I<phrase of notes or whatnot as list or array ref>
 
@@ -850,9 +862,9 @@ output scale.
 
 Assuming an input phrase of C<C G c#>, the output phrase would be C<C' F
 undef> by default, as there is no way to convert C<c#> using these map
-and transposition settings. Other settings will have between zero to
-several notes that cannot be converted. The C<eg/conversion-charts> file
-of this module's distribution contains more such charts, as also can be
+and transposition settings. Other settings will have zero to several
+notes that cannot be converted. The C<eg/conversion-charts> file of this
+module's distribution contains more such charts, as also can be
 generated by the C<eg/brutecanon> utility.
 
 How to map non-scale notes is another concern; the above chart shows two
@@ -1028,7 +1040,7 @@ thrig - Jeremy Mates (cpan:JMATES) C<< <jmates at cpan.org> >>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2013-2015 by Jeremy Mates
+Copyright (C) 2013-2016 by Jeremy Mates
 
 This module is free software; you can redistribute it and/or modify it
 under the Artistic License (2.0).
