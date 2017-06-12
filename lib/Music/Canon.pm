@@ -18,7 +18,7 @@ use Music::Scales qw/get_scale_nums is_scale/;
 use namespace::clean;
 use Scalar::Util qw/blessed looks_like_number/;
 
-our $VERSION = '2.04';
+our $VERSION = '2.05';
 
 # Array indices for ascending versus descending scales (as some minor
 # scales are different, depending)
@@ -1003,6 +1003,27 @@ software would likely be to have two C<Music::Canon> objects, and pass
 pitches to one or the other depending on whether the pitch is in the c-g
 range, and to the other for g-b.
 
+=head1 EXAMPLES
+
+The following boilerplate may be a good starting point for arbitrary
+mapping of input pitches into some different output form.
+
+    use Music::Canon;
+    my $mc = Music::Canon->new;
+    $mc->non_octave_scales(1);
+    $mc->set_contrary(0);
+    $mc->set_modal_pitches( 60, 60 );
+    $mc->set_modal_scale_in(  [qw/1 1 1 1 1 1 1 1 1 1/] );
+    $mc->set_modal_scale_out( [qw/2 2 1 2 2 2 1 2 2 1/] );
+
+Individual pitches can be converted though this requires list context as
+otherwise one obtains the number of elements in the output phrase.
+
+    my $input_pitch = 42;
+    my $p = $mc->modal_map($input_pitch);        # wrong
+    my $q = ( $mc->modal_map($input_pitch) )[0]  # ok
+    my @q = $mc->modal_map($input_pitch);        # ok
+
 =head1 BUGS
 
 =head2 Reporting Bugs
@@ -1025,6 +1046,8 @@ Actual composition often requires arbitrary adjustment of canonic or
 other imitative forms, usually to make the harmony more convincing. Such
 adjustments are outside the scope of this module.
 
+The documentation goes on for a long while.
+
 =head1 SEE ALSO
 
 "Fugue and Invention in Theory and Practice" by John W. Verrall
@@ -1040,7 +1063,7 @@ thrig - Jeremy Mates (cpan:JMATES) C<< <jmates at cpan.org> >>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2013-2016 by Jeremy Mates
+Copyright (C) 2013-2017 by Jeremy Mates
 
 This module is free software; you can redistribute it and/or modify it
 under the Artistic License (2.0).
