@@ -8,7 +8,6 @@ use warnings;
 use List::Util qw/min/;
 use Music::Canon        ();
 use Music::LilyPondUtil ();
-use Try::Tiny;
 
 # Notes to iterate over (0..23 or similar might make output easier to grep for
 # particular patterns, as that way both the input and output will cover
@@ -63,11 +62,10 @@ for my $in_mode (@modes) {
           my $set = gen_settings_str( $in_mode, $out_mode, $t, $c, $r );
           my @output;
           my $meh;
-          try {
+          eval {
             @output = $canon->modal_map( \@input );
-          }
-          catch { $meh = 1 };
-          next if $meh;
+          };
+          next if $@;
 
           if ( min( grep defined, @output ) < -10 ) {
             for my $p (@output) {
